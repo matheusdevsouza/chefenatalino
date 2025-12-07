@@ -1,0 +1,206 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: 'Outfit', sans-serif;
+  --font-serif: 'Playfair Display', serif;
+  
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #fef2f2;
+  --color-text-primary: #111827;
+  --color-text-secondary: #4b5563;
+  
+  --color-red-primary: #dc2626;
+  --color-red-hover: #b91c1c;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html {
+  scroll-behavior: auto; 
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-font-feature-settings: "kern" 1;
+  font-feature-settings: "kern" 1;
+  -webkit-text-stroke: 0.01px transparent;
+  text-stroke: 0.01px transparent;
+}
+
+::selection {
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+::-moz-selection {
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+@layer utilities {
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+  }
+
+  .glass-panel:hover {
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      #fef2f2 25%,
+      #fee2e2 50%,
+      #fef2f2 75%
+    );
+    background-size: 200% 100%;
+    animation: loading 1.5s ease-in-out infinite;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes countUp {
+    from {
+      transform: scale(0.8);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+    opacity: 0;
+  }
+
+  .animate-slideIn {
+    animation: slideIn 0.3s ease-out forwards;
+    opacity: 0;
+  }
+
+  .animate-countUp {
+    animation: countUp 0.3s ease-out forwards;
+  }
+
+  @keyframes loading {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  details summary {
+    list-style: none;
+  }
+
+  details summary::-webkit-details-marker {
+    display: none;
+  }
+
+  @keyframes faqItemEnter {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .faq-item {
+    animation: faqItemEnter 0.5s ease-out forwards;
+    opacity: 0;
+  }
+
+  .faq-content {
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                opacity 0.3s ease-out, 
+                padding-top 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                padding-bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    padding: 0 1.5rem;
+  }
+
+  details[open] .faq-content {
+    max-height: 500px;
+    opacity: 1;
+    padding: 1rem 1.5rem 1.5rem 1.5rem;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                opacity 0.4s ease-in 0.1s, 
+                padding-top 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                padding-bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  details summary span:last-child span {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-block;
+  }
+
+  details[open] summary span:last-child span {
+    transform: rotate(45deg);
+  }
+
+}
