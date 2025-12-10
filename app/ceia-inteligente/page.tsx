@@ -34,10 +34,10 @@ export default function CeiaInteligentePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-[#1a1a1a] flex items-center justify-center transition-colors duration-300">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Verificando acesso...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 dark:border-red-400 mx-auto mb-4"></div>
+          <p className="text-slate-600 dark:text-[#d4d4d4]">Verificando acesso...</p>
         </div>
       </div>
     )
@@ -45,49 +45,49 @@ export default function CeiaInteligentePage() {
 
   if (!userId || !isPaid) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-white dark:bg-[#1a1a1a] transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-red-600 hover:text-red-700 transition-colors mb-8"
+            className="inline-flex items-center gap-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors mb-8"
           >
             <ArrowLeft className="w-4 h-4" />
             Voltar para Home
           </Link>
           
           <div className="max-w-2xl mx-auto text-center py-16">
-            <div className="bg-red-50 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
-              <Lock className="w-12 h-12 text-red-600" />
+            <div className="bg-red-50 dark:bg-red-900/30 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
+              <Lock className="w-12 h-12 text-red-600 dark:text-red-400" />
             </div>
             
-            <h1 className="font-serif text-3xl md:text-4xl mb-4 text-slate-900">
+            <h1 className="font-serif text-3xl md:text-4xl mb-4 text-slate-900 dark:text-[#f5f5f5]">
               Acesso Restrito
             </h1>
             
             {!userId ? (
               <>
-                <p className="text-slate-600 text-lg mb-8">
+                <p className="text-slate-600 dark:text-[#d4d4d4] text-lg mb-8">
                   Você precisa estar logado para acessar a Ceia Inteligente.
                 </p>
-                <p className="text-slate-500 mb-8">
+                <p className="text-slate-500 dark:text-[#a3a3a3] mb-8">
                   Faça login ou crie uma conta para começar a usar todas as funcionalidades.
                 </p>
                 <Link href="/#precos">
-                  <Button size="lg" variant="primary" className="bg-red-600 hover:bg-red-700 text-white">
+                  <Button size="lg" variant="primary" className="bg-red-600 dark:bg-red-600 hover:bg-red-700 dark:hover:bg-red-500 text-white">
                     Ver Planos e Preços
                   </Button>
                 </Link>
               </>
             ) : (
               <>
-                <p className="text-slate-600 text-lg mb-8">
+                <p className="text-slate-600 dark:text-[#d4d4d4] text-lg mb-8">
                   Você precisa ter um plano ativo para acessar a Ceia Inteligente.
                 </p>
-                <p className="text-slate-500 mb-8">
+                <p className="text-slate-500 dark:text-[#a3a3a3] mb-8">
                   Assine um de nossos planos mensais para ter acesso completo a todas as funcionalidades.
                 </p>
                 <Link href="/#precos">
-                  <Button size="lg" variant="primary" className="bg-red-600 hover:bg-red-700 text-white">
+                  <Button size="lg" variant="primary" className="bg-red-600 dark:bg-red-600 hover:bg-red-700 dark:hover:bg-red-500 text-white">
                     Ver Planos e Preços
                   </Button>
                 </Link>
@@ -100,11 +100,11 @@ export default function CeiaInteligentePage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a] transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-red-600 hover:text-red-700 transition-colors mb-6"
+          className="inline-flex items-center gap-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Voltar para Home

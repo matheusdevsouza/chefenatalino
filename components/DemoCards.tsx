@@ -1,9 +1,10 @@
 'use client'
 
 import React, { useState, useEffect, createContext, useContext, useRef } from 'react'
+import { useCardAnimation } from './DemoCardAnimator'
 import { 
   Brain, ShoppingCart, Clock, Users, Gift, Users2,
-  ArrowRight, Check, Loader2, Lock, Sparkles
+  ArrowRight, Check, Loader2, Lock, Sparkles, X
 } from 'lucide-react'
 
 /**
@@ -16,11 +17,19 @@ import {
 interface DemoContextType {
   unlockedFeatures: Set<string>
   unlockFeature: (feature: string) => void
+  previewCard: string | null
+  setPreviewCard: (cardId: string | null) => void
+  isAnimating: boolean
+  setIsAnimating: (animating: boolean) => void
 }
 
 const DemoContext = createContext<DemoContextType>({
   unlockedFeatures: new Set(['brain']),
-  unlockFeature: () => {}
+  unlockFeature: () => {},
+  previewCard: null,
+  setPreviewCard: () => {},
+  isAnimating: false,
+  setIsAnimating: () => {}
 })
 
 /**
@@ -32,19 +41,28 @@ const DemoContext = createContext<DemoContextType>({
 
 export const DemoProvider = ({ children }: { children: React.ReactNode }) => {
   const [unlockedFeatures, setUnlockedFeatures] = useState<Set<string>>(new Set(['brain']))
+  const [previewCard, setPreviewCard] = useState<string | null>(null)
+  const [isAnimating, setIsAnimating] = useState(false)
 
   const unlockFeature = (feature: string) => {
     setUnlockedFeatures(prev => new Set(Array.from(prev).concat(feature)))
   }
 
   return (
-    <DemoContext.Provider value={{ unlockedFeatures, unlockFeature }}>
+    <DemoContext.Provider value={{ 
+      unlockedFeatures, 
+      unlockFeature,
+      previewCard,
+      setPreviewCard,
+      isAnimating,
+      setIsAnimating
+    }}>
       {children}
     </DemoContext.Provider>
   )
 }
 
-const useDemo = () => useContext(DemoContext)
+export const useDemo = () => useContext(DemoContext)
 
 /**
  * Simula o efeito de digitação em tempo real.
@@ -84,16 +102,45 @@ const Typewriter = ({ text, speed = 30, onComplete, className = '' }: {
  * o cardápio. Ao completar, desbloqueia o próximo card.
  */
 
-export const BrainDemo = () => {
-  const { unlockFeature } = useDemo()
+interface DemoProps {
+  isPreview?: boolean
+  cardReady?: boolean
+  onClose?: () => void
+}
+
+export const BrainDemo = ({ isPreview = false, cardReady = false, onClose }: DemoProps = {}) => {
+  const { unlockFeature, setPreviewCard, previewCard, isAnimating } = useDemo()
   const [step, setStep] = useState<'idle' | 'user-typing' | 'sending' | 'ai-analyzing' | 'ai-typing' | 'complete'>('idle')
+  const cardRef = useCardAnimation('brain', isPreview)
+  const isInPreview = previewCard === 'brain'
 
   const predefinedUserMessage = '8 adultos, 2 crianças, sem glúten, orçamento R$ 500'
   const predefinedAiResponse = 'Cardápio Gourmet Adaptado Gerado!\n✓ Entrada: Salada de rúcula com nozes\n✓ Prato principal: Peru assado sem glúten\n✓ Acompanhamentos: Batatas rústicas, arroz\n✓ Sobremesa: Mousse de chocolate\n✓ Bebidas: Suco natural, água'
 
   const handleStart = () => {
-    setStep('user-typing')
+    if (isPreview) {
+      /**
+       * Se já está no preview, inicia a animação diretamente.
+       */
+      if (cardReady) {
+        setStep('user-typing')
+      }
+    } else {
+      /**
+       * Move o card para o preview para iniciar a animação.
+       */
+      setPreviewCard('brain')
+    }
   }
+
+  /**
+   * Inicia a animação automaticamente quando o card estiver pronto no preview.
+   */
+  useEffect(() => {
+    if (isPreview && cardReady && step === 'idle') {
+      setStep('user-typing')
+    }
+  }, [isPreview, cardReady, step])
 
   useEffect(() => {
     if (step === 'user-typing') {
@@ -126,14 +173,50 @@ export const BrainDemo = () => {
     }
   }, [step, unlockFeature])
 
+  /**
+   * Esconde o card original quando está no preview e não está animando.
+   * Evita duplicação visual durante a animação.
+   */
+  if (!isPreview && isInPreview && !isAnimating) {
+    return <div className="opacity-0 pointer-events-none" aria-hidden="true" />
+  }
+
   return (
-    <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 border border-red-200 hover:shadow-xl transition-all duration-300 relative overflow-hidden flex flex-col h-full">
-      <div className="w-12 h-12 bg-red-600 text-white rounded-lg flex items-center justify-center mb-4">
+    <div 
+      ref={cardRef}
+      className={`bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 rounded-2xl border border-red-200 dark:border-red-900/30 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 relative overflow-hidden flex flex-col ${
+        isPreview ? 'p-10 w-full h-full min-h-[600px] absolute inset-0' : 'p-6'
+      } ${isPreview ? 'demo-card-preview' : ''}`}
+      data-card-id="brain"
+    >
+      {isPreview && onClose && (
+        <button
+          onClick={onClose}
+          className={`absolute top-4 right-4 z-30 bg-white/90 dark:bg-[#2e2e2e]/90 hover:bg-white dark:hover:bg-[#2e2e2e] rounded-full p-2 shadow-lg transition-all hover:scale-110 ${
+            cardReady ? 'animate-expandIn' : 'opacity-0 pointer-events-none'
+          }`}
+          style={{ animationDelay: cardReady ? '0s' : '0s' }}
+        >
+          <X className="w-5 h-5 text-slate-600 dark:text-[#d4d4d4]" />
+        </button>
+      )}
+      <div className={`absolute ${isPreview ? 'bottom-4' : 'top-4'} right-4 bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold z-10 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.03s' : '0s' }}>
+        1
+      </div>
+      <div className={`w-12 h-12 bg-red-600 text-white rounded-lg flex items-center justify-center mb-4 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.06s' : '0s' }}>
         <Brain className="w-6 h-6" />
       </div>
-      <h3 className="font-serif text-xl mb-4 text-slate-900">O Cérebro do Natal</h3>
+      <h3 className={`font-serif text-xl mb-4 text-slate-900 dark:text-[#f5f5f5] ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.09s' : '0s' }}>O Cérebro do Natal</h3>
       
-      <div className="space-y-3 transition-all duration-300 flex-grow">
+      <div className={`space-y-3 flex-grow min-h-0 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0 pointer-events-none' : ''
+      }`} style={{ animationDelay: cardReady ? '0.12s' : '0s' }}>
         {step === 'idle' && (
           <button
             onClick={handleStart}
@@ -146,9 +229,9 @@ export const BrainDemo = () => {
 
         {(step === 'user-typing' || step === 'sending' || step === 'ai-analyzing' || step === 'ai-typing' || step === 'complete') && (
           <>
-            <div className="bg-white/80 rounded-lg p-3 border border-red-100">
-              <div className="text-xs text-slate-500 mb-1">Você:</div>
-              <div className="text-sm text-slate-700">
+            <div className="bg-white/80 dark:bg-[#2e2e2e]/80 rounded-lg p-3 border border-red-100 dark:border-red-900/30">
+              <div className="text-xs text-slate-500 dark:text-[#a3a3a3] mb-1">Você:</div>
+              <div className="text-sm text-slate-700 dark:text-[#d4d4d4]">
                 {step === 'user-typing' ? (
                   <Typewriter text={predefinedUserMessage} speed={30} />
                 ) : (
@@ -158,26 +241,26 @@ export const BrainDemo = () => {
             </div>
 
             {step === 'sending' && (
-              <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+              <div className="flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-[#a3a3a3]">
                 <Loader2 className="w-3 h-3 animate-spin" />
                 <span>Enviando para IA...</span>
               </div>
             )}
 
             {step === 'ai-analyzing' && (
-              <div className="flex items-center gap-2 text-xs text-slate-600 bg-white/50 rounded-lg p-3">
-                <Loader2 className="w-4 h-4 text-red-600 animate-spin" />
+              <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-[#d4d4d4] bg-white/50 dark:bg-[#2e2e2e]/50 rounded-lg p-3">
+                <Loader2 className="w-4 h-4 text-red-600 dark:text-red-400 animate-spin" />
                 <span>IA Analisando suas preferências...</span>
               </div>
             )}
 
             {(step === 'ai-typing' || step === 'complete') && (
-              <div className="bg-red-50 rounded-lg p-3 border border-red-200">
-                <div className="flex items-center gap-2 text-xs text-red-600 mb-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 border border-red-200 dark:border-red-900/30">
+                <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400 animate-pulse"></div>
                   <span className="font-semibold">IA:</span>
                 </div>
-                <div className="text-sm text-slate-700 whitespace-pre-line">
+                <div className="text-sm text-slate-700 dark:text-[#d4d4d4] whitespace-pre-line">
                   {step === 'ai-typing' ? (
                     <Typewriter text={predefinedAiResponse} speed={20} />
                   ) : (
@@ -190,7 +273,7 @@ export const BrainDemo = () => {
             {step === 'complete' && (
               <button
                 onClick={handleStart}
-                className="w-full text-xs text-red-600 hover:underline mt-2"
+                className="w-full text-xs text-red-600 dark:text-red-400 hover:underline mt-2"
               >
                 Ver novamente
               </button>
@@ -199,7 +282,9 @@ export const BrainDemo = () => {
         )}
       </div>
       
-      <p className="text-xs text-slate-600 mt-auto pt-4">A IA processa suas preferências em segundos</p>
+      <p className={`text-xs text-slate-600 dark:text-[#a3a3a3] mt-4 pt-4 border-t border-red-200 dark:border-red-900/30 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.15s' : '0s' }}>A IA processa suas preferências em segundos</p>
     </div>
   )
 }
@@ -211,11 +296,13 @@ export const BrainDemo = () => {
  * o cálculo automático de quantidades. Desbloqueia o cronograma ao final.
  */
 
-export const ShoppingListDemo = () => {
-  const { unlockedFeatures, unlockFeature } = useDemo()
+export const ShoppingListDemo = ({ isPreview = false, cardReady = false, onClose }: DemoProps = {}) => {
+  const { unlockedFeatures, unlockFeature, setPreviewCard, previewCard, isAnimating } = useDemo()
   const [step, setStep] = useState<'locked' | 'idle' | 'generating' | 'complete'>('locked')
   const [items, setItems] = useState<Array<{ name: string; qty: string }>>([])
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const cardRef = useCardAnimation('shopping', isPreview)
+  const isInPreview = previewCard === 'shopping'
 
   const demoItems = [
     { name: 'Rúcula', qty: '500g' },
@@ -253,29 +340,71 @@ export const ShoppingListDemo = () => {
     }
   }, [])
 
-  const handleGenerate = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
+  useEffect(() => {
+    if (isPreview && cardReady && step === 'idle') {
+      /**
+       * Inicia a animação automaticamente quando o card estiver pronto no preview.
+       */
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+
+      setStep('generating')
+      setItems([])
+      let index = 0
+
+      intervalRef.current = setInterval(() => {
+        if (index < demoItems.length && demoItems[index]) {
+          setItems(prev => [...prev, demoItems[index]])
+          index++
+        } else {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current)
+            intervalRef.current = null
+          }
+          setStep('complete')
+          unlockFeature('schedule')
+        }
+      }, 400)
     }
+  }, [isPreview, cardReady, step, unlockFeature])
 
-    setStep('generating')
-    setItems([])
-    let index = 0
-
-    intervalRef.current = setInterval(() => {
-      if (index < demoItems.length && demoItems[index]) {
-        setItems(prev => [...prev, demoItems[index]])
-        index++
-      } else {
+  const handleGenerate = () => {
+    if (isPreview) {
+      /**
+       * Se já está no preview, reinicia a animação.
+       */
+      if (cardReady) {
         if (intervalRef.current) {
           clearInterval(intervalRef.current)
           intervalRef.current = null
         }
-        setStep('complete')
-        unlockFeature('schedule')
+
+        setStep('generating')
+        setItems([])
+        let index = 0
+
+        intervalRef.current = setInterval(() => {
+          if (index < demoItems.length && demoItems[index]) {
+            setItems(prev => [...prev, demoItems[index]])
+            index++
+          } else {
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current)
+              intervalRef.current = null
+            }
+            setStep('complete')
+            unlockFeature('schedule')
+          }
+        }, 400)
       }
-    }, 400)
+    } else {
+      /**
+       * Move o card para o preview para iniciar a animação.
+       */
+      setPreviewCard('shopping')
+    }
   }
 
   const handleReset = () => {
@@ -289,29 +418,74 @@ export const ShoppingListDemo = () => {
 
   if (step === 'locked') {
     return (
-      <div className="bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl p-6 border border-slate-300 relative overflow-hidden opacity-60">
+      <div className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-[#2e2e2e] dark:to-[#1a1a1a] rounded-2xl p-6 border border-slate-300 dark:border-[#3a3a3a] relative overflow-hidden opacity-60 flex flex-col">
+        <div className="absolute inset-0 backdrop-blur-[1.5px] z-[1] pointer-events-none"></div>
+        <div className="absolute top-4 right-4 bg-slate-400 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold z-20">
+          2
+        </div>
         <div className="absolute inset-0 flex items-center justify-center z-10">
-          <div className="bg-white/90 rounded-full p-4 shadow-lg">
-            <Lock className="w-8 h-8 text-slate-400" />
+          <div className="bg-white/90 dark:bg-[#2e2e2e]/90 backdrop-blur-sm rounded-full p-4 shadow-lg">
+            <Lock className="w-8 h-8 text-slate-400 dark:text-[#a3a3a3]" />
           </div>
         </div>
         <div className="w-12 h-12 bg-slate-400 text-white rounded-lg flex items-center justify-center mb-4">
           <ShoppingCart className="w-6 h-6" />
         </div>
-        <h3 className="font-serif text-xl mb-4 text-slate-600">Lista Automática</h3>
-        <p className="text-xs text-slate-500">Complete a demo anterior para desbloquear</p>
+        <h3 className="font-serif text-xl mb-4 text-slate-600 dark:text-[#a3a3a3]">Lista Automática</h3>
+        <div className="space-y-3 flex-grow min-h-0">
+          <button
+            disabled
+            className="w-full bg-slate-400 text-white text-sm py-3 px-4 rounded-lg cursor-not-allowed font-semibold opacity-75"
+          >
+            <Sparkles className="w-4 h-4 inline mr-2" />
+            Gerar Lista de Compras
+          </button>
+        </div>
+        <p className="text-xs text-slate-500 dark:text-[#a3a3a3] mt-4 pt-4 border-t border-slate-300 dark:border-[#3a3a3a]">Complete a demo anterior para desbloquear</p>
       </div>
     )
   }
 
+  if (!isPreview && isInPreview && !isAnimating) {
+    return <div className="opacity-0 pointer-events-none" aria-hidden="true" />
+  }
+
   return (
-    <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 border border-red-200 hover:shadow-xl transition-all duration-300 flex flex-col h-full">
-      <div className="w-12 h-12 bg-red-600 text-white rounded-lg flex items-center justify-center mb-4">
+    <div 
+      ref={cardRef}
+      className={`bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 rounded-2xl border border-red-200 dark:border-red-900/30 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 flex flex-col relative ${
+        isPreview ? 'p-10 w-full h-full min-h-[600px] absolute inset-0' : 'p-6'
+      } ${isPreview ? 'demo-card-preview' : ''}`}
+      data-card-id="shopping"
+    >
+      {isPreview && onClose && (
+        <button
+          onClick={onClose}
+          className={`absolute top-4 right-4 z-30 bg-white/90 dark:bg-[#2e2e2e]/90 hover:bg-white dark:hover:bg-[#2e2e2e] rounded-full p-2 shadow-lg transition-all hover:scale-110 ${
+            cardReady ? 'animate-expandIn' : 'opacity-0 pointer-events-none'
+          }`}
+          style={{ animationDelay: cardReady ? '0s' : '0s' }}
+        >
+          <X className="w-5 h-5 text-slate-600 dark:text-[#d4d4d4]" />
+        </button>
+      )}
+      <div className={`absolute ${isPreview ? 'bottom-4' : 'top-4'} right-4 bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold z-10 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.03s' : '0s' }}>
+        2
+      </div>
+      <div className={`w-12 h-12 bg-red-600 text-white rounded-lg flex items-center justify-center mb-4 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.06s' : '0s' }}>
         <ShoppingCart className="w-6 h-6" />
       </div>
-      <h3 className="font-serif text-xl mb-4 text-slate-900">Lista Automática</h3>
+      <h3 className={`font-serif text-xl mb-4 text-slate-900 dark:text-[#f5f5f5] ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.09s' : '0s' }}>Lista Automática</h3>
       
-      <div className="transition-all duration-300 flex-grow">
+      <div className={`flex-grow min-h-0 flex flex-col ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0 pointer-events-none' : ''
+      }`} style={{ animationDelay: cardReady ? '0.12s' : '0s' }}>
         {step === 'idle' && (
           <button
             onClick={handleGenerate}
@@ -323,35 +497,63 @@ export const ShoppingListDemo = () => {
         )}
 
         {(step === 'generating' || step === 'complete') && (
-          <div className="bg-white/80 rounded-lg p-4 border border-red-100 space-y-2">
-            {items.map((item, idx) => {
-              if (!item || !item.name || !item.qty) return null
-              return (
-                <div
-                  key={idx}
-                  className="flex justify-between items-center animate-fadeIn text-sm"
-                  style={{ animationDelay: `${idx * 0.1}s` }}
-                >
-                  <span className="text-slate-700">{item.name}</span>
-                  <span className="font-semibold text-red-600">{item.qty}</span>
-                </div>
-              )
-            })}
+          <div className="bg-white/80 dark:bg-[#2e2e2e]/80 rounded-lg p-4 border border-red-100 dark:border-red-900/30 flex-grow min-h-0 flex flex-col">
+            <div 
+              className="flex-grow overflow-y-auto pr-2 max-h-[300px] overscroll-contain"
+              style={{ pointerEvents: 'auto' }}
+              onWheel={(e) => {
+                const target = e.currentTarget
+                const isScrollable = target.scrollHeight > target.clientHeight
+                
+                if (isScrollable) {
+                  const isAtTop = target.scrollTop <= 1
+                  const isAtBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 1
+                  
+                  /**
+                   * Gerencia scroll inteligente:
+                   * - Se está no topo e tentando scrollar para cima, ou no bottom e tentando scrollar para baixo,
+                   *   permite que o scroll da página aconteça (não há mais scroll disponível no elemento)
+                   * - Caso contrário, previne o scroll da página e aplica o scroll manualmente no elemento
+                   */
+                  if ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0)) {
+                    return
+                  } else {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    target.scrollTop += e.deltaY
+                  }
+                }
+              }}
+            >
+              {items.map((item, idx) => {
+                if (!item || !item.name || !item.qty) return null
+                return (
+                  <div
+                    key={idx}
+                    className="flex justify-between items-start gap-4 animate-fadeIn text-sm py-1.5"
+                    style={{ animationDelay: `${idx * 0.1}s` }}
+                  >
+                    <span className="text-slate-700 dark:text-[#d4d4d4] flex-1 break-words">{item.name}</span>
+                    <span className="font-semibold text-red-600 dark:text-red-400 whitespace-nowrap flex-shrink-0">{item.qty}</span>
+                  </div>
+                )
+              })}
+            </div>
             {step === 'generating' && (
-              <div className="flex items-center gap-2 text-slate-500 text-xs mt-3">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-[#a3a3a3] text-xs mt-3">
                 <Loader2 className="w-3 h-3 animate-spin" />
                 <span>Calculando quantidades...</span>
               </div>
             )}
             {step === 'complete' && (
-              <div className="mt-4 pt-3 border-t border-slate-200">
+              <div className="mt-4 pt-3 border-t border-slate-200 dark:border-[#3a3a3a]">
                 <div className="flex items-center justify-between font-semibold text-sm">
-                  <span>Total Estimado:</span>
-                  <span className="text-red-600">R$ 350,00</span>
+                  <span className="text-slate-700 dark:text-[#d4d4d4]">Total Estimado:</span>
+                  <span className="text-red-600 dark:text-red-400">R$ 350,00</span>
                 </div>
                 <button
                   onClick={handleReset}
-                  className="w-full text-xs text-red-600 hover:underline mt-2"
+                  className="w-full text-xs text-red-600 dark:text-red-400 hover:underline mt-2"
                 >
                   Gerar nova lista
                 </button>
@@ -361,7 +563,9 @@ export const ShoppingListDemo = () => {
         )}
       </div>
       
-      <p className="text-xs text-slate-600 mt-auto pt-4">Quantidades calculadas automaticamente</p>
+      <p className={`text-xs text-slate-600 dark:text-[#a3a3a3] mt-4 pt-4 border-t border-red-200 dark:border-red-900/30 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.15s' : '0s' }}>Quantidades calculadas automaticamente</p>
     </div>
   )
 }
@@ -373,11 +577,13 @@ export const ShoppingListDemo = () => {
  * com horários e atividades aparecendo sequencialmente.
  */
 
-export const ScheduleDemo = () => {
-  const { unlockedFeatures, unlockFeature } = useDemo()
+export const ScheduleDemo = ({ isPreview = false, cardReady = false, onClose }: DemoProps = {}) => {
+  const { unlockedFeatures, unlockFeature, setPreviewCard, previewCard, isAnimating } = useDemo()
   const [step, setStep] = useState<'locked' | 'idle' | 'generating' | 'complete'>('locked')
   const [events, setEvents] = useState<Array<{ time: string; task: string }>>([])
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const cardRef = useCardAnimation('schedule', isPreview)
+  const isInPreview = previewCard === 'schedule'
 
   const demoEvents = [
     { time: '14:00', task: 'Começar temperar o peru sem glúten' },
@@ -407,29 +613,71 @@ export const ScheduleDemo = () => {
     }
   }, [])
 
-  const handleGenerate = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
+  useEffect(() => {
+    if (isPreview && cardReady && step === 'idle') {
+      /**
+       * Inicia a animação automaticamente quando o card estiver pronto no preview.
+       */
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+
+      setStep('generating')
+      setEvents([])
+      let index = 0
+
+      intervalRef.current = setInterval(() => {
+        if (index < demoEvents.length && demoEvents[index]) {
+          setEvents(prev => [...prev, demoEvents[index]])
+          index++
+        } else {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current)
+            intervalRef.current = null
+          }
+          setStep('complete')
+          unlockFeature('guests')
+        }
+      }, 500)
     }
+  }, [isPreview, cardReady, step, unlockFeature])
 
-    setStep('generating')
-    setEvents([])
-    let index = 0
-
-    intervalRef.current = setInterval(() => {
-      if (index < demoEvents.length && demoEvents[index]) {
-        setEvents(prev => [...prev, demoEvents[index]])
-        index++
-      } else {
+  const handleGenerate = () => {
+    if (isPreview) {
+      /**
+       * Se já está no preview, reinicia a animação.
+       */
+      if (cardReady) {
         if (intervalRef.current) {
           clearInterval(intervalRef.current)
           intervalRef.current = null
         }
-        setStep('complete')
-        unlockFeature('guests')
+
+        setStep('generating')
+        setEvents([])
+        let index = 0
+
+        intervalRef.current = setInterval(() => {
+          if (index < demoEvents.length && demoEvents[index]) {
+            setEvents(prev => [...prev, demoEvents[index]])
+            index++
+          } else {
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current)
+              intervalRef.current = null
+            }
+            setStep('complete')
+            unlockFeature('guests')
+          }
+        }, 500)
       }
-    }, 500)
+    } else {
+      /**
+       * Move o card para o preview para iniciar a animação.
+       */
+      setPreviewCard('schedule')
+    }
   }
 
   const handleReset = () => {
@@ -443,29 +691,74 @@ export const ScheduleDemo = () => {
 
   if (step === 'locked') {
     return (
-      <div className="bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl p-6 border border-slate-300 relative overflow-hidden opacity-60">
+      <div className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-[#2e2e2e] dark:to-[#1a1a1a] rounded-2xl p-6 border border-slate-300 dark:border-[#3a3a3a] relative overflow-hidden opacity-60 flex flex-col">
+        <div className="absolute inset-0 backdrop-blur-[1.5px] z-[1] pointer-events-none"></div>
+        <div className="absolute top-4 right-4 bg-slate-400 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold z-20">
+          3
+        </div>
         <div className="absolute inset-0 flex items-center justify-center z-10">
-          <div className="bg-white/90 rounded-full p-4 shadow-lg">
-            <Lock className="w-8 h-8 text-slate-400" />
+          <div className="bg-white/90 dark:bg-[#2e2e2e]/90 backdrop-blur-sm rounded-full p-4 shadow-lg">
+            <Lock className="w-8 h-8 text-slate-400 dark:text-[#a3a3a3]" />
           </div>
         </div>
         <div className="w-12 h-12 bg-slate-400 text-white rounded-lg flex items-center justify-center mb-4">
           <Clock className="w-6 h-6" />
         </div>
-        <h3 className="font-serif text-xl mb-4 text-slate-600">Cronograma</h3>
-        <p className="text-xs text-slate-500">Complete a demo anterior para desbloquear</p>
+        <h3 className="font-serif text-xl mb-4 text-slate-600 dark:text-[#a3a3a3]">Cronograma</h3>
+        <div className="transition-all duration-300 flex-grow min-h-0 flex flex-col">
+          <button
+            disabled
+            className="w-full bg-slate-400 text-white text-sm py-3 px-4 rounded-lg cursor-not-allowed font-semibold opacity-75"
+          >
+            <Sparkles className="w-4 h-4 inline mr-2" />
+            Criar Cronograma
+          </button>
+        </div>
+        <p className="text-xs text-slate-500 dark:text-[#a3a3a3] mt-4 pt-4 border-t border-slate-300 dark:border-[#3a3a3a]">Complete a demo anterior para desbloquear</p>
       </div>
     )
   }
 
+  if (!isPreview && isInPreview && !isAnimating) {
+    return <div className="opacity-0 pointer-events-none" aria-hidden="true" />
+  }
+
   return (
-    <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 border border-red-200 hover:shadow-xl transition-all duration-300 flex flex-col h-full">
-      <div className="w-12 h-12 bg-red-600 text-white rounded-lg flex items-center justify-center mb-4">
+    <div 
+      ref={cardRef}
+      className={`bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 rounded-2xl border border-red-200 dark:border-red-900/30 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 flex flex-col relative ${
+        isPreview ? 'p-10 w-full h-full min-h-[600px] absolute inset-0' : 'p-6'
+      } ${isPreview ? 'demo-card-preview' : ''}`}
+      data-card-id="schedule"
+    >
+      {isPreview && onClose && (
+        <button
+          onClick={onClose}
+          className={`absolute top-4 right-4 z-30 bg-white/90 dark:bg-[#2e2e2e]/90 hover:bg-white dark:hover:bg-[#2e2e2e] rounded-full p-2 shadow-lg transition-all hover:scale-110 ${
+            cardReady ? 'animate-expandIn' : 'opacity-0 pointer-events-none'
+          }`}
+          style={{ animationDelay: cardReady ? '0s' : '0s' }}
+        >
+          <X className="w-5 h-5 text-slate-600 dark:text-[#d4d4d4]" />
+        </button>
+      )}
+      <div className={`absolute ${isPreview ? 'bottom-4' : 'top-4'} right-4 bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold z-10 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.03s' : '0s' }}>
+        3
+      </div>
+      <div className={`w-12 h-12 bg-red-600 text-white rounded-lg flex items-center justify-center mb-4 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.06s' : '0s' }}>
         <Clock className="w-6 h-6" />
       </div>
-      <h3 className="font-serif text-xl mb-4 text-slate-900">Cronograma</h3>
+      <h3 className={`font-serif text-xl mb-4 text-slate-900 dark:text-[#f5f5f5] ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.09s' : '0s' }}>Cronograma</h3>
       
-      <div className="transition-all duration-300 flex-grow">
+      <div className={`flex-grow min-h-0 flex flex-col ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0 pointer-events-none' : ''
+      }`} style={{ animationDelay: cardReady ? '0.12s' : '0s' }}>
         {step === 'idle' && (
           <button
             onClick={handleGenerate}
@@ -477,24 +770,52 @@ export const ScheduleDemo = () => {
         )}
 
         {(step === 'generating' || step === 'complete') && (
-          <div className="bg-white/80 rounded-lg p-4 border border-red-100 space-y-2">
-            {events.map((event, idx) => {
-              if (!event || !event.time || !event.task) return null
-              return (
-                <div
-                  key={idx}
-                  className="flex items-center gap-3 animate-slideIn text-sm"
-                  style={{ animationDelay: `${idx * 0.1}s` }}
-                >
-                  <span className="font-bold text-red-600 w-16">{event.time}</span>
-                  <span className={`text-slate-700 ${event.time === '00:00' ? 'font-semibold' : ''}`}>
-                    {event.task}
-                  </span>
-                </div>
-              )
-            })}
+          <div className="bg-white/80 dark:bg-[#2e2e2e]/80 rounded-lg p-4 border border-red-100 dark:border-red-900/30 space-y-2 flex-grow min-h-0 flex flex-col">
+            <div 
+              className="space-y-2 flex-grow overflow-y-auto pr-1 max-h-[300px] overscroll-contain" 
+              style={{ pointerEvents: 'auto' }}
+              onWheel={(e) => {
+                const target = e.currentTarget
+                const isScrollable = target.scrollHeight > target.clientHeight
+                
+                if (isScrollable) {
+                  const isAtTop = target.scrollTop <= 1
+                  const isAtBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 1
+                  
+                  /**
+                   * Gerencia scroll inteligente:
+                   * - Se está no topo e tentando scrollar para cima, ou no bottom e tentando scrollar para baixo,
+                   *   permite que o scroll da página aconteça (não há mais scroll disponível no elemento)
+                   * - Caso contrário, previne o scroll da página e aplica o scroll manualmente no elemento
+                   */
+                  if ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0)) {
+                    return
+                  } else {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    target.scrollTop += e.deltaY
+                  }
+                }
+              }}
+            >
+              {events.map((event, idx) => {
+                if (!event || !event.time || !event.task) return null
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-3 animate-slideIn text-sm"
+                    style={{ animationDelay: `${idx * 0.1}s` }}
+                  >
+                    <span className="font-bold text-red-600 dark:text-red-400 w-16">{event.time}</span>
+                    <span className={`text-slate-700 dark:text-[#d4d4d4] ${event.time === '00:00' ? 'font-semibold' : ''}`}>
+                      {event.task}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
             {step === 'generating' && (
-              <div className="flex items-center gap-2 text-slate-500 text-xs mt-3">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-[#a3a3a3] text-xs mt-3">
                 <Loader2 className="w-3 h-3 animate-spin" />
                 <span>Organizando timeline...</span>
               </div>
@@ -502,7 +823,7 @@ export const ScheduleDemo = () => {
             {step === 'complete' && (
               <button
                 onClick={handleReset}
-                className="w-full text-xs text-red-600 hover:underline mt-3"
+                className="w-full text-xs text-red-600 dark:text-red-400 hover:underline mt-3"
               >
                 Criar novo cronograma
               </button>
@@ -511,7 +832,9 @@ export const ScheduleDemo = () => {
         )}
       </div>
       
-      <p className="text-xs text-slate-600 mt-auto pt-4">Timeline minuto a minuto</p>
+      <p className={`text-xs text-slate-600 dark:text-[#a3a3a3] mt-4 pt-4 border-t border-red-200 dark:border-red-900/30 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.15s' : '0s' }}>Timeline minuto a minuto</p>
     </div>
   )
 }
@@ -524,11 +847,13 @@ export const ScheduleDemo = () => {
  * Total de 10 pessoas: 8 adultos e 2 crianças.
  */
 
-export const GuestsDemo = () => {
-  const { unlockedFeatures, unlockFeature } = useDemo()
+export const GuestsDemo = ({ isPreview = false, cardReady = false, onClose }: DemoProps = {}) => {
+  const { unlockedFeatures, unlockFeature, setPreviewCard, previewCard, isAnimating } = useDemo()
   const [step, setStep] = useState<'locked' | 'idle' | 'ai-analyzing' | 'ai-typing' | 'showing-guests' | 'complete'>('locked')
   const [guests, setGuests] = useState<string[]>([])
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const cardRef = useCardAnimation('guests', isPreview)
+  const isInPreview = previewCard === 'guests'
 
   const demoGuests = ['João', 'Maria', 'Pedro', 'Ana', 'Carlos', 'Julia', 'Fernanda', 'Lucas', 'Pedrinho', 'Sophia']
   const predefinedAiResponse = 'Total confirmados: 10\n✓ 8 adultos\n✓ 2 crianças'
@@ -550,10 +875,15 @@ export const GuestsDemo = () => {
     }
   }, [])
 
-  const handleStart = () => {
-    setStep('ai-analyzing')
-    setGuests([])
-  }
+  useEffect(() => {
+    if (isPreview && cardReady && step === 'idle') {
+      /**
+       * Inicia a animação automaticamente quando o card estiver pronto no preview.
+       */
+      setStep('ai-analyzing')
+      setGuests([])
+    }
+  }, [isPreview, cardReady, step])
 
   useEffect(() => {
     if (step === 'ai-analyzing') {
@@ -585,6 +915,27 @@ export const GuestsDemo = () => {
     }
   }, [step, unlockFeature])
 
+  const handleStart = () => {
+    if (isPreview) {
+      /**
+       * Se já está no preview, reinicia a animação.
+       */
+      if (cardReady) {
+        setStep('ai-analyzing')
+        setGuests([])
+      }
+    } else {
+      /**
+       * Move o card para o preview para iniciar a animação.
+       */
+      setPreviewCard('guests')
+    }
+  }
+
+  if (!isPreview && isInPreview && !isAnimating) {
+    return <div className="opacity-0 pointer-events-none" aria-hidden="true" />
+  }
+
   const handleReset = () => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
@@ -596,29 +947,70 @@ export const GuestsDemo = () => {
 
   if (step === 'locked') {
     return (
-      <div className="bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl p-6 border border-slate-300 relative overflow-hidden opacity-60">
+      <div className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-[#2e2e2e] dark:to-[#1a1a1a] rounded-2xl p-6 border border-slate-300 dark:border-[#3a3a3a] relative overflow-hidden opacity-60 flex flex-col">
+        <div className="absolute inset-0 backdrop-blur-[1.5px] z-[1] pointer-events-none"></div>
+        <div className="absolute top-4 right-4 bg-slate-400 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold z-20">
+          4
+        </div>
         <div className="absolute inset-0 flex items-center justify-center z-10">
-          <div className="bg-white/90 rounded-full p-4 shadow-lg">
-            <Lock className="w-8 h-8 text-slate-400" />
+          <div className="bg-white/90 dark:bg-[#2e2e2e]/90 backdrop-blur-sm rounded-full p-4 shadow-lg">
+            <Lock className="w-8 h-8 text-slate-400 dark:text-[#a3a3a3]" />
           </div>
         </div>
         <div className="w-12 h-12 bg-slate-400 text-white rounded-lg flex items-center justify-center mb-4">
           <Users className="w-6 h-6" />
         </div>
-        <h3 className="font-serif text-xl mb-4 text-slate-600">Gestão de Convidados</h3>
-        <p className="text-xs text-slate-500">Complete a demo anterior para desbloquear</p>
+        <h3 className="font-serif text-xl mb-4 text-slate-600 dark:text-[#a3a3a3]">Gestão de Convidados</h3>
+        <div className="space-y-3 transition-all duration-300 flex-grow min-h-0 flex flex-col">
+          <button
+            disabled
+            className="w-full bg-slate-400 text-white text-sm py-3 px-4 rounded-lg cursor-not-allowed font-semibold opacity-75"
+          >
+            <Sparkles className="w-4 h-4 inline mr-2" />
+            Ver Confirmações
+          </button>
+        </div>
+        <p className="text-xs text-slate-500 dark:text-[#a3a3a3] mt-4 pt-4 border-t border-slate-300 dark:border-[#3a3a3a]">Complete a demo anterior para desbloquear</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 border border-red-200 hover:shadow-xl transition-all duration-300 flex flex-col h-full">
-      <div className="w-12 h-12 bg-red-600 text-white rounded-lg flex items-center justify-center mb-4">
+    <div 
+      ref={cardRef}
+      className={`bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 rounded-2xl border border-red-200 dark:border-red-900/30 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 flex flex-col relative ${
+        isPreview ? 'p-10 w-full h-full min-h-[600px] absolute inset-0' : 'p-6'
+      } ${isPreview ? 'demo-card-preview' : ''}`}
+      data-card-id="guests"
+    >
+      {isPreview && onClose && (
+        <button
+          onClick={onClose}
+          className={`absolute top-4 right-4 z-30 bg-white/90 dark:bg-[#2e2e2e]/90 hover:bg-white dark:hover:bg-[#2e2e2e] rounded-full p-2 shadow-lg transition-all hover:scale-110 ${
+            cardReady ? 'animate-expandIn' : 'opacity-0 pointer-events-none'
+          }`}
+          style={{ animationDelay: cardReady ? '0s' : '0s' }}
+        >
+          <X className="w-5 h-5 text-slate-600 dark:text-[#d4d4d4]" />
+        </button>
+      )}
+      <div className={`absolute ${isPreview ? 'bottom-4' : 'top-4'} right-4 bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold z-10 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.03s' : '0s' }}>
+        4
+      </div>
+      <div className={`w-12 h-12 bg-red-600 text-white rounded-lg flex items-center justify-center mb-4 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.06s' : '0s' }}>
         <Users className="w-6 h-6" />
       </div>
-      <h3 className="font-serif text-xl mb-4 text-slate-900">Gestão de Convidados</h3>
+      <h3 className={`font-serif text-xl mb-4 text-slate-900 dark:text-[#f5f5f5] ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.09s' : '0s' }}>Gestão de Convidados</h3>
       
-      <div className="space-y-3 transition-all duration-300 flex-grow">
+      <div className={`space-y-3 flex-grow min-h-0 flex flex-col ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0 pointer-events-none' : ''
+      }`} style={{ animationDelay: cardReady ? '0.12s' : '0s' }}>
         {step === 'idle' && (
           <button
             onClick={handleStart}
@@ -632,19 +1024,19 @@ export const GuestsDemo = () => {
         {(step === 'ai-analyzing' || step === 'ai-typing' || step === 'showing-guests' || step === 'complete') && (
           <>
             {step === 'ai-analyzing' && (
-              <div className="flex items-center gap-2 text-xs text-slate-600 bg-white/50 rounded-lg p-3">
-                <Loader2 className="w-4 h-4 text-red-600 animate-spin" />
+              <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-[#d4d4d4] bg-white/50 dark:bg-[#2e2e2e]/50 rounded-lg p-3">
+                <Loader2 className="w-4 h-4 text-red-600 dark:text-red-400 animate-spin" />
                 <span>IA Analisando confirmações...</span>
               </div>
             )}
 
             {(step === 'ai-typing' || step === 'showing-guests' || step === 'complete') && (
-              <div className="bg-red-50 rounded-lg p-3 border border-red-200">
-                <div className="flex items-center gap-2 text-xs text-red-600 mb-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 border border-red-200 dark:border-red-900/30">
+                <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400 animate-pulse"></div>
                   <span className="font-semibold">IA:</span>
                 </div>
-                <div className="text-sm text-slate-700 whitespace-pre-line">
+                <div className="text-sm text-slate-700 dark:text-[#d4d4d4] whitespace-pre-line">
                   {step === 'ai-typing' ? (
                     <Typewriter text={predefinedAiResponse} speed={15} />
                   ) : (
@@ -655,19 +1047,34 @@ export const GuestsDemo = () => {
             )}
 
             {(step === 'showing-guests' || step === 'complete') && guests.length > 0 && (
-              <div className="bg-white/80 rounded-lg p-3 border border-red-100">
-                <p className="text-xs text-slate-600 mb-2 font-semibold">Lista de confirmados:</p>
-                <div className="space-y-1">
+              <div className="bg-white/80 dark:bg-[#2e2e2e]/80 rounded-lg p-3 border border-red-100 dark:border-red-900/30 flex-grow min-h-0 flex flex-col">
+                <p className="text-xs text-slate-600 dark:text-[#d4d4d4] mb-2 font-semibold">Lista de confirmados:</p>
+                <div 
+                  className="space-y-1 flex-grow overflow-y-auto pr-1 max-h-[200px] overscroll-contain" 
+                  style={{ pointerEvents: 'auto' }}
+                  onWheel={(e) => {
+                    const target = e.currentTarget
+                    const isScrollable = target.scrollHeight > target.clientHeight
+                    const isAtTop = target.scrollTop === 0
+                    const isAtBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 1
+                    
+                    if (isScrollable && ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0))) {
+                      e.preventDefault()
+                    } else if (isScrollable) {
+                      e.stopPropagation()
+                    }
+                  }}
+                >
                   {guests.map((guest, idx) => {
                     if (!guest) return null
                     return (
                       <div
                         key={idx}
-                        className="flex items-center justify-between p-2 bg-red-50 rounded text-xs animate-fadeIn"
+                        className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-900/20 rounded text-xs animate-fadeIn"
                         style={{ animationDelay: `${idx * 0.05}s` }}
                       >
-                        <span className="text-slate-700">{guest}</span>
-                        <Check className="w-3 h-3 text-green-600" />
+                        <span className="text-slate-700 dark:text-[#d4d4d4]">{guest}</span>
+                        <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
                       </div>
                     )
                   })}
@@ -678,7 +1085,7 @@ export const GuestsDemo = () => {
             {step === 'complete' && (
               <button
                 onClick={handleReset}
-                className="w-full text-xs text-red-600 hover:underline mt-2"
+                  className="w-full text-xs text-red-600 dark:text-red-400 hover:underline mt-2"
               >
                 Ver novamente
               </button>
@@ -687,7 +1094,9 @@ export const GuestsDemo = () => {
         )}
       </div>
       
-      <p className="text-xs text-slate-600 mt-auto pt-4">Acompanhe confirmações em tempo real</p>
+      <p className={`text-xs text-slate-600 dark:text-[#a3a3a3] mt-4 pt-4 border-t border-red-200 dark:border-red-900/30 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.15s' : '0s' }}>Acompanhe confirmações em tempo real</p>
     </div>
   )
 }
@@ -699,9 +1108,11 @@ export const GuestsDemo = () => {
  * da pessoa, IA analisa e sugere presentes com links para compra.
  */
 
-export const GiftSuggestionsDemo = () => {
-  const { unlockedFeatures, unlockFeature } = useDemo()
+export const GiftSuggestionsDemo = ({ isPreview = false, cardReady = false, onClose }: DemoProps = {}) => {
+  const { unlockedFeatures, unlockFeature, setPreviewCard, previewCard, isAnimating } = useDemo()
   const [step, setStep] = useState<'locked' | 'idle' | 'user-typing' | 'sending' | 'ai-analyzing' | 'ai-typing' | 'complete'>('locked')
+  const cardRef = useCardAnimation('gifts', isPreview)
+  const isInPreview = previewCard === 'gifts'
 
   const predefinedUserMessage = 'Maria, 35 anos, ama cozinha'
   const predefinedAiResponse = 'Sugestões personalizadas:\n\n✓ Kit de facas profissionais\n  🔗 mercadolivre.com.br/kit-facas-pro\n  🔗 amazon.com.br/facas-profissionais\n\n✓ Livro de receitas gourmet\n  🔗 amazon.com.br/livro-receitas-gourmet\n  🔗 americanas.com.br/receitas-premium\n\n✓ Acessórios de cozinha premium\n  🔗 magazineluiza.com.br/acessorios-cozinha\n  🔗 casasbahia.com.br/cozinha-premium'
@@ -714,9 +1125,14 @@ export const GiftSuggestionsDemo = () => {
     }
   }, [unlockedFeatures, step])
 
-  const handleStart = () => {
-    setStep('user-typing')
-  }
+  useEffect(() => {
+    if (isPreview && cardReady && step === 'idle') {
+      /**
+       * Inicia a animação automaticamente quando o card estiver pronto no preview.
+       */
+      setStep('user-typing')
+    }
+  }, [isPreview, cardReady, step])
 
   useEffect(() => {
     if (step === 'user-typing') {
@@ -749,31 +1165,92 @@ export const GiftSuggestionsDemo = () => {
     }
   }, [step, unlockFeature])
 
+  const handleStart = () => {
+    if (isPreview) {
+      /**
+       * Se já está no preview, reinicia a animação.
+       */
+      if (cardReady) {
+        setStep('user-typing')
+      }
+    } else {
+      /**
+       * Move o card para o preview para iniciar a animação.
+       */
+      setPreviewCard('gifts')
+    }
+  }
+
+  if (!isPreview && isInPreview && !isAnimating) {
+    return <div className="opacity-0 pointer-events-none" aria-hidden="true" />
+  }
+
   if (step === 'locked') {
     return (
-      <div className="bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl p-6 border border-slate-300 relative overflow-hidden opacity-60">
+      <div className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-[#2e2e2e] dark:to-[#1a1a1a] rounded-2xl p-6 border border-slate-300 dark:border-[#3a3a3a] relative overflow-hidden opacity-60 flex flex-col">
+        <div className="absolute inset-0 backdrop-blur-[1.5px] z-[1] pointer-events-none"></div>
+        <div className="absolute top-4 right-4 bg-slate-400 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold z-20">
+          5
+        </div>
         <div className="absolute inset-0 flex items-center justify-center z-10">
-          <div className="bg-white/90 rounded-full p-4 shadow-lg">
-            <Lock className="w-8 h-8 text-slate-400" />
+          <div className="bg-white/90 dark:bg-[#2e2e2e]/90 backdrop-blur-sm rounded-full p-4 shadow-lg">
+            <Lock className="w-8 h-8 text-slate-400 dark:text-[#a3a3a3]" />
           </div>
         </div>
         <div className="w-12 h-12 bg-slate-400 text-white rounded-lg flex items-center justify-center mb-4">
           <Gift className="w-6 h-6" />
         </div>
-        <h3 className="font-serif text-xl mb-4 text-slate-600">Sugestões de Presentes</h3>
-        <p className="text-xs text-slate-500">Complete a demo anterior para desbloquear</p>
+        <h3 className="font-serif text-xl mb-4 text-slate-600 dark:text-[#a3a3a3]">Sugestões de Presentes</h3>
+        <div className="space-y-3 transition-all duration-300 flex-grow min-h-0 flex flex-col">
+          <button
+            disabled
+            className="w-full bg-slate-400 text-white text-sm py-3 px-4 rounded-lg cursor-not-allowed font-semibold opacity-75"
+          >
+            <Sparkles className="w-4 h-4 inline mr-2" />
+            Analisar Perfil
+          </button>
+        </div>
+        <p className="text-xs text-slate-500 dark:text-[#a3a3a3] mt-4 pt-4 border-t border-slate-300 dark:border-[#3a3a3a]">Complete a demo anterior para desbloquear</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 border border-red-200 hover:shadow-xl transition-all duration-300 flex flex-col h-full">
-      <div className="w-12 h-12 bg-red-600 text-white rounded-lg flex items-center justify-center mb-4">
+    <div 
+      ref={cardRef}
+      className={`bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 rounded-2xl border border-red-200 dark:border-red-900/30 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 flex flex-col relative ${
+        isPreview ? 'p-10 w-full h-full min-h-[600px] absolute inset-0' : 'p-6'
+      } ${isPreview ? 'demo-card-preview' : ''}`}
+      data-card-id="gifts"
+    >
+      {isPreview && onClose && (
+        <button
+          onClick={onClose}
+          className={`absolute top-4 right-4 z-30 bg-white/90 dark:bg-[#2e2e2e]/90 hover:bg-white dark:hover:bg-[#2e2e2e] rounded-full p-2 shadow-lg transition-all hover:scale-110 ${
+            cardReady ? 'animate-expandIn' : 'opacity-0 pointer-events-none'
+          }`}
+          style={{ animationDelay: cardReady ? '0s' : '0s' }}
+        >
+          <X className="w-5 h-5 text-slate-600 dark:text-[#d4d4d4]" />
+        </button>
+      )}
+      <div className={`absolute ${isPreview ? 'bottom-4' : 'top-4'} right-4 bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold z-10 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.03s' : '0s' }}>
+        5
+      </div>
+      <div className={`w-12 h-12 bg-red-600 text-white rounded-lg flex items-center justify-center mb-4 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.06s' : '0s' }}>
         <Gift className="w-6 h-6" />
       </div>
-      <h3 className="font-serif text-xl mb-4 text-slate-900">Sugestões de Presentes</h3>
+      <h3 className={`font-serif text-xl mb-4 text-slate-900 dark:text-[#f5f5f5] ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.09s' : '0s' }}>Sugestões de Presentes</h3>
       
-      <div className="space-y-3 transition-all duration-300 flex-grow">
+      <div className={`space-y-3 flex-grow min-h-0 flex flex-col ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0 pointer-events-none' : ''
+      }`} style={{ animationDelay: cardReady ? '0.12s' : '0s' }}>
         {step === 'idle' && (
           <button
             onClick={handleStart}
@@ -786,9 +1263,9 @@ export const GiftSuggestionsDemo = () => {
 
         {(step === 'user-typing' || step === 'sending' || step === 'ai-analyzing' || step === 'ai-typing' || step === 'complete') && (
           <>
-            <div className="bg-white/80 rounded-lg p-3 border border-red-100">
-              <div className="text-xs text-slate-500 mb-1">Você:</div>
-              <div className="text-sm text-slate-700">
+            <div className="bg-white/80 dark:bg-[#2e2e2e]/80 rounded-lg p-3 border border-red-100 dark:border-red-900/30">
+              <div className="text-xs text-slate-500 dark:text-[#a3a3a3] mb-1">Você:</div>
+              <div className="text-sm text-slate-700 dark:text-[#d4d4d4]">
                 {step === 'user-typing' ? (
                   <Typewriter text={predefinedUserMessage} speed={30} />
                 ) : (
@@ -798,26 +1275,41 @@ export const GiftSuggestionsDemo = () => {
             </div>
 
             {step === 'sending' && (
-              <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+              <div className="flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-[#a3a3a3]">
                 <Loader2 className="w-3 h-3 animate-spin" />
                 <span>Enviando para IA...</span>
               </div>
             )}
 
             {step === 'ai-analyzing' && (
-              <div className="flex items-center gap-2 text-xs text-slate-600 bg-white/50 rounded-lg p-3">
-                <Loader2 className="w-4 h-4 text-red-600 animate-spin" />
+              <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-[#d4d4d4] bg-white/50 dark:bg-[#2e2e2e]/50 rounded-lg p-3">
+                <Loader2 className="w-4 h-4 text-red-600 dark:text-red-400 animate-spin" />
                 <span>IA Analisando perfil...</span>
               </div>
             )}
 
             {(step === 'ai-typing' || step === 'complete') && (
-              <div className="bg-red-50 rounded-lg p-3 border border-red-200">
-                <div className="flex items-center gap-2 text-xs text-red-600 mb-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 border border-red-200 dark:border-red-900/30 flex-grow min-h-0 flex flex-col">
+                <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400 animate-pulse"></div>
                   <span className="font-semibold">IA:</span>
                 </div>
-                <div className="text-sm text-slate-700 whitespace-pre-line">
+                <div 
+                  className="text-sm text-slate-700 dark:text-[#d4d4d4] whitespace-pre-line overflow-y-auto pr-1 max-h-[250px] overscroll-contain" 
+                  style={{ pointerEvents: 'auto' }}
+                  onWheel={(e) => {
+                    const target = e.currentTarget
+                    const isScrollable = target.scrollHeight > target.clientHeight
+                    const isAtTop = target.scrollTop === 0
+                    const isAtBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 1
+                    
+                    if (isScrollable && ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0))) {
+                      e.preventDefault()
+                    } else if (isScrollable) {
+                      e.stopPropagation()
+                    }
+                  }}
+                >
                   {step === 'ai-typing' ? (
                     <Typewriter text={predefinedAiResponse} speed={20} />
                   ) : (
@@ -830,7 +1322,7 @@ export const GiftSuggestionsDemo = () => {
             {step === 'complete' && (
               <button
                 onClick={handleStart}
-                className="w-full text-xs text-red-600 hover:underline mt-2"
+                  className="w-full text-xs text-red-600 dark:text-red-400 hover:underline mt-2"
               >
                 Analisar outro perfil
               </button>
@@ -839,7 +1331,9 @@ export const GiftSuggestionsDemo = () => {
         )}
       </div>
       
-      <p className="text-xs text-slate-600 mt-auto pt-4">Sugestões personalizadas por IA</p>
+      <p className={`text-xs text-slate-600 dark:text-[#a3a3a3] mt-4 pt-4 border-t border-red-200 dark:border-red-900/30 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.15s' : '0s' }}>Sugestões personalizadas por IA</p>
     </div>
   )
 }
@@ -851,10 +1345,12 @@ export const GiftSuggestionsDemo = () => {
  * Simula o embaralhamento e mostra os pares sendo formados.
  */
 
-export const SecretSantaDemo = () => {
-  const { unlockedFeatures } = useDemo()
+export const SecretSantaDemo = ({ isPreview = false, cardReady = false, onClose }: DemoProps = {}) => {
+  const { unlockedFeatures, setPreviewCard, previewCard, isAnimating } = useDemo()
   const [step, setStep] = useState<'locked' | 'idle' | 'shuffling' | 'complete'>('locked')
   const [pairs, setPairs] = useState<Array<{ from: string; to: string }>>([])
+  const cardRef = useCardAnimation('secretSanta', isPreview)
+  const isInPreview = previewCard === 'secretSanta'
 
   const demoNames = ['João', 'Maria', 'Pedro', 'Ana', 'Carlos', 'Julia', 'Fernanda', 'Lucas', 'Pedrinho', 'Sophia']
 
@@ -866,19 +1362,55 @@ export const SecretSantaDemo = () => {
     }
   }, [unlockedFeatures, step])
 
+  useEffect(() => {
+    if (isPreview && cardReady && step === 'idle') {
+      /**
+       * Inicia a animação automaticamente quando o card estiver pronto no preview.
+       */
+      setStep('shuffling')
+      setPairs([])
+      
+      setTimeout(() => {
+        const shuffled = [...demoNames].sort(() => Math.random() - 0.5)
+        const newPairs = demoNames.map((name, idx) => ({
+          from: name,
+          to: shuffled[idx] === name ? shuffled[(idx + 1) % demoNames.length] : shuffled[idx]
+        }))
+        setPairs(newPairs)
+        setStep('complete')
+      }, 1500)
+    }
+  }, [isPreview, cardReady, step])
+
   const handleShuffle = () => {
-    setStep('shuffling')
-    setPairs([])
-    
-    setTimeout(() => {
-      const shuffled = [...demoNames].sort(() => Math.random() - 0.5)
-      const newPairs = demoNames.map((name, idx) => ({
-        from: name,
-        to: shuffled[idx] === name ? shuffled[(idx + 1) % demoNames.length] : shuffled[idx]
-      }))
-      setPairs(newPairs)
-      setStep('complete')
-    }, 1500)
+    if (isPreview) {
+      /**
+       * Se já está no preview, reinicia a animação.
+       */
+      if (cardReady) {
+        setStep('shuffling')
+        setPairs([])
+        
+        setTimeout(() => {
+          const shuffled = [...demoNames].sort(() => Math.random() - 0.5)
+          const newPairs = demoNames.map((name, idx) => ({
+            from: name,
+            to: shuffled[idx] === name ? shuffled[(idx + 1) % demoNames.length] : shuffled[idx]
+          }))
+          setPairs(newPairs)
+          setStep('complete')
+        }, 1500)
+      }
+    } else {
+      /**
+       * Move o card para o preview para iniciar a animação.
+       */
+      setPreviewCard('secretSanta')
+    }
+  }
+
+  if (!isPreview && isInPreview && !isAnimating) {
+    return <div className="opacity-0 pointer-events-none" aria-hidden="true" />
   }
 
   const handleReset = () => {
@@ -888,29 +1420,70 @@ export const SecretSantaDemo = () => {
 
   if (step === 'locked') {
     return (
-      <div className="bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl p-6 border border-slate-300 relative overflow-hidden opacity-60">
+      <div className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-[#2e2e2e] dark:to-[#1a1a1a] rounded-2xl p-6 border border-slate-300 dark:border-[#3a3a3a] relative overflow-hidden opacity-60 flex flex-col">
+        <div className="absolute inset-0 backdrop-blur-[1.5px] z-[1] pointer-events-none"></div>
+        <div className="absolute top-4 right-4 bg-slate-400 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold z-20">
+          6
+        </div>
         <div className="absolute inset-0 flex items-center justify-center z-10">
-          <div className="bg-white/90 rounded-full p-4 shadow-lg">
-            <Lock className="w-8 h-8 text-slate-400" />
+          <div className="bg-white/90 dark:bg-[#2e2e2e]/90 backdrop-blur-sm rounded-full p-4 shadow-lg">
+            <Lock className="w-8 h-8 text-slate-400 dark:text-[#a3a3a3]" />
           </div>
         </div>
         <div className="w-12 h-12 bg-slate-400 text-white rounded-lg flex items-center justify-center mb-4">
           <Users2 className="w-6 h-6" />
         </div>
-        <h3 className="font-serif text-xl mb-4 text-slate-600">Amigo Secreto</h3>
-        <p className="text-xs text-slate-500">Complete a demo anterior para desbloquear</p>
+        <h3 className="font-serif text-xl mb-4 text-slate-600 dark:text-[#a3a3a3]">Amigo Secreto</h3>
+        <div className="transition-all duration-300 flex-grow min-h-0 flex flex-col">
+          <button
+            disabled
+            className="w-full bg-slate-400 text-white text-sm py-3 px-4 rounded-lg cursor-not-allowed font-semibold opacity-75"
+          >
+            <Sparkles className="w-4 h-4 inline mr-2" />
+            Sortear Amigo Secreto
+          </button>
+        </div>
+        <p className="text-xs text-slate-500 dark:text-[#a3a3a3] mt-4 pt-4 border-t border-slate-300 dark:border-[#3a3a3a]">Complete a demo anterior para desbloquear</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 border border-red-200 hover:shadow-xl transition-all duration-300 flex flex-col h-full">
-      <div className="w-12 h-12 bg-red-600 text-white rounded-lg flex items-center justify-center mb-4">
+    <div 
+      ref={cardRef}
+      className={`bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 rounded-2xl border border-red-200 dark:border-red-900/30 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 flex flex-col relative ${
+        isPreview ? 'p-10 w-full h-full min-h-[600px] absolute inset-0' : 'p-6'
+      } ${isPreview ? 'demo-card-preview' : ''}`}
+      data-card-id="secretSanta"
+    >
+      {isPreview && onClose && (
+        <button
+          onClick={onClose}
+          className={`absolute top-4 right-4 z-30 bg-white/90 dark:bg-[#2e2e2e]/90 hover:bg-white dark:hover:bg-[#2e2e2e] rounded-full p-2 shadow-lg transition-all hover:scale-110 ${
+            cardReady ? 'animate-expandIn' : 'opacity-0 pointer-events-none'
+          }`}
+          style={{ animationDelay: cardReady ? '0s' : '0s' }}
+        >
+          <X className="w-5 h-5 text-slate-600 dark:text-[#d4d4d4]" />
+        </button>
+      )}
+      <div className={`absolute ${isPreview ? 'bottom-4' : 'top-4'} right-4 bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold z-10 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.03s' : '0s' }}>
+        6
+      </div>
+      <div className={`w-12 h-12 bg-red-600 text-white rounded-lg flex items-center justify-center mb-4 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.06s' : '0s' }}>
         <Users2 className="w-6 h-6" />
       </div>
-      <h3 className="font-serif text-xl mb-4 text-slate-900">Amigo Secreto</h3>
+      <h3 className={`font-serif text-xl mb-4 text-slate-900 dark:text-[#f5f5f5] ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.09s' : '0s' }}>Amigo Secreto</h3>
       
-      <div className="transition-all duration-300 flex-grow flex flex-col">
+      <div className={`transition-all duration-300 flex-grow min-h-0 flex flex-col ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.12s' : '0s' }}>
         {step === 'idle' && (
           <button
             onClick={handleShuffle}
@@ -922,33 +1495,50 @@ export const SecretSantaDemo = () => {
         )}
 
         {(step === 'shuffling' || (step === 'complete' && pairs.length > 0)) && (
-          <div className="bg-white/80 rounded-lg p-4 border border-red-100 flex-grow flex flex-col">
+          <div className="bg-white/80 dark:bg-[#2e2e2e]/80 rounded-lg p-4 border border-red-100 dark:border-red-900/30 flex-grow min-h-0 flex flex-col">
             {step === 'shuffling' && (
               <div className="text-center py-8">
-                <Loader2 className="w-8 h-8 text-red-600 animate-spin mx-auto mb-3" />
-                <p className="text-sm text-slate-600">Embaralhando e garantindo sorteio justo...</p>
+                <Loader2 className="w-8 h-8 text-red-600 dark:text-red-400 animate-spin mx-auto mb-3" />
+                <p className="text-sm text-slate-600 dark:text-[#d4d4d4]">Embaralhando e garantindo sorteio justo...</p>
               </div>
             )}
 
             {step === 'complete' && pairs.length > 0 && (
-              <div className="space-y-2">
-                {pairs.map((pair, idx) => {
-                  if (!pair || !pair.from || !pair.to) return null
-                  return (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-2 p-2 rounded animate-fadeIn"
-                      style={{ animationDelay: `${idx * 0.1}s` }}
-                    >
-                      <span className="text-slate-700 text-sm flex-1 text-left">{pair.from}</span>
-                      <ArrowRight className="w-4 h-4 text-red-600 flex-shrink-0 mx-1" />
-                      <span className="text-slate-700 font-semibold text-sm flex-1 text-right">{pair.to}</span>
-                    </div>
-                  )
-                })}
+              <div className="flex-grow min-h-0 flex flex-col">
+                <div 
+                  className="space-y-2 flex-grow overflow-y-auto pr-1 max-h-[300px] overscroll-contain" 
+                  style={{ pointerEvents: 'auto' }}
+                  onWheel={(e) => {
+                    const target = e.currentTarget
+                    const isScrollable = target.scrollHeight > target.clientHeight
+                    const isAtTop = target.scrollTop === 0
+                    const isAtBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 1
+                    
+                    if (isScrollable && ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0))) {
+                      e.preventDefault()
+                    } else if (isScrollable) {
+                      e.stopPropagation()
+                    }
+                  }}
+                >
+                  {pairs.map((pair, idx) => {
+                    if (!pair || !pair.from || !pair.to) return null
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 p-2 rounded animate-fadeIn"
+                        style={{ animationDelay: `${idx * 0.1}s` }}
+                      >
+                        <span className="text-slate-700 dark:text-[#d4d4d4] text-sm flex-1 text-left">{pair.from}</span>
+                        <ArrowRight className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mx-1" />
+                        <span className="text-slate-700 dark:text-[#d4d4d4] font-semibold text-sm flex-1 text-right">{pair.to}</span>
+                      </div>
+                    )
+                  })}
+                </div>
                 <button
                   onClick={handleReset}
-                  className="w-full text-xs text-red-600 hover:underline mt-3"
+                  className="w-full text-xs text-red-600 dark:text-red-400 hover:underline mt-3"
                 >
                   Realizar novo sorteio
                 </button>
@@ -958,7 +1548,9 @@ export const SecretSantaDemo = () => {
         )}
       </div>
       
-      <p className="text-xs text-slate-600 mt-auto pt-4">Sorteio automático e justo</p>
+      <p className={`text-xs text-slate-600 dark:text-[#a3a3a3] mt-4 pt-4 border-t border-red-200 dark:border-red-900/30 ${
+        isPreview && cardReady ? 'animate-expandIn' : isPreview ? 'opacity-0' : ''
+      }`} style={{ animationDelay: cardReady ? '0.15s' : '0s' }}>Sorteio automático e justo</p>
     </div>
   )
 }

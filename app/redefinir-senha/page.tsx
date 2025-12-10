@@ -7,6 +7,7 @@ import { Lock, ArrowLeft, Eye, EyeOff, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
+import { sanitizeToken } from '@/lib/security/clientInputSanitizer'
 
 /**
  * Componente interno da página de redefinição de senha
@@ -85,6 +86,22 @@ function ResetPasswordForm() {
 
     setLoading(true)
 
+    // Sanitizar token antes de enviar
+    const sanitizedToken = sanitizeToken(token || '')
+    if (!sanitizedToken) {
+      setError('Token inválido')
+      setLoading(false)
+      return
+    }
+
+    // Password não precisa sanitização (será hasheado no backend)
+    // Mas limitamos tamanho para prevenir DoS
+    if (password.length > 1000) {
+      setError('Senha muito longa')
+      setLoading(false)
+      return
+    }
+
     try {
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
@@ -92,7 +109,7 @@ function ResetPasswordForm() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          token,
+          token: sanitizedToken,
           password 
         }),
       })
@@ -120,12 +137,12 @@ function ResetPasswordForm() {
 
   if (validating) {
     return (
-      <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-vermelho-vibrante selection:text-white">
+      <div className="min-h-screen bg-white dark:bg-[#1a1a1a] font-sans text-slate-900 dark:text-[#f5f5f5] selection:bg-vermelho-vibrante selection:text-white transition-colors duration-300">
         <Header />
-        <div className="min-h-screen bg-slate-50/50 flex items-center justify-center px-4 py-12 pt-24 sm:pt-28">
+        <div className="min-h-screen bg-slate-50/50 dark:bg-[#1a1a1a]/50 flex items-center justify-center px-4 py-12 pt-24 sm:pt-28">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-            <p className="text-slate-600">Validando token...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 dark:border-red-400 mx-auto mb-4"></div>
+            <p className="text-slate-600 dark:text-[#d4d4d4]">Validando token...</p>
           </div>
         </div>
         <Footer />
@@ -135,13 +152,13 @@ function ResetPasswordForm() {
 
   if (!validToken) {
     return (
-      <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-vermelho-vibrante selection:text-white">
+      <div className="min-h-screen bg-white dark:bg-[#1a1a1a] font-sans text-slate-900 dark:text-[#f5f5f5] selection:bg-vermelho-vibrante selection:text-white transition-colors duration-300">
         <Header />
-        <div className="min-h-screen bg-slate-50/50 flex items-center justify-center px-4 py-12 pt-24 sm:pt-28">
+        <div className="min-h-screen bg-slate-50/50 dark:bg-[#1a1a1a]/50 flex items-center justify-center px-4 py-12 pt-24 sm:pt-28">
           <div className="w-full max-w-md">
-            <div className="bg-white rounded-2xl p-8 shadow-xl border border-slate-200 text-center">
-              <h1 className="font-serif text-2xl text-slate-900 mb-4">Link inválido ou expirado</h1>
-              <p className="text-slate-600 mb-6">
+            <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-8 shadow-xl border border-slate-200 dark:border-[#3a3a3a] text-center">
+              <h1 className="font-serif text-2xl text-slate-900 dark:text-[#f5f5f5] mb-4">Link inválido ou expirado</h1>
+              <p className="text-slate-600 dark:text-[#d4d4d4] mb-6">
                 {error || 'O link de redefinição de senha é inválido ou expirou. Solicite um novo link.'}
               </p>
               
@@ -160,16 +177,16 @@ function ResetPasswordForm() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-vermelho-vibrante selection:text-white">
+      <div className="min-h-screen bg-white dark:bg-[#1a1a1a] font-sans text-slate-900 dark:text-[#f5f5f5] selection:bg-vermelho-vibrante selection:text-white transition-colors duration-300">
         <Header />
-        <div className="min-h-screen bg-slate-50/50 flex items-center justify-center px-4 py-12 pt-24 sm:pt-28">
+        <div className="min-h-screen bg-slate-50/50 dark:bg-[#1a1a1a]/50 flex items-center justify-center px-4 py-12 pt-24 sm:pt-28">
           <div className="w-full max-w-md">
-            <div className="bg-white rounded-2xl p-8 shadow-xl border border-slate-200 text-center">
-              <div className="flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mx-auto mb-4">
-                <CheckCircle className="w-8 h-8 text-green-600" />
+            <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-8 shadow-xl border border-slate-200 dark:border-[#3a3a3a] text-center">
+              <div className="flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
-              <h1 className="font-serif text-2xl text-slate-900 mb-2">Senha redefinida!</h1>
-              <p className="text-slate-600 mb-6">
+              <h1 className="font-serif text-2xl text-slate-900 dark:text-[#f5f5f5] mb-2">Senha redefinida!</h1>
+              <p className="text-slate-600 dark:text-[#d4d4d4] mb-6">
                 Sua senha foi redefinida com sucesso. Você será redirecionado para a página de login.
               </p>
               <Link href="/login">
@@ -186,32 +203,30 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-vermelho-vibrante selection:text-white">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a] font-sans text-slate-900 dark:text-[#f5f5f5] selection:bg-vermelho-vibrante selection:text-white transition-colors duration-300">
       <Header />
-      <div className="min-h-screen bg-slate-50/50 flex items-center justify-center px-4 py-12 pt-24 sm:pt-28">
+      <div className="min-h-screen bg-slate-50/50 dark:bg-[#1a1a1a]/50 flex items-center justify-center px-4 py-12 pt-24 sm:pt-28">
         <div className="w-full max-w-md">
-          {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="font-serif text-3xl text-slate-900 mb-2">Redefinir senha</h1>
-            <p className="text-slate-600">Digite sua nova senha</p>
+            <h1 className="font-serif text-3xl text-slate-900 dark:text-[#f5f5f5] mb-2">Redefinir senha</h1>
+            <p className="text-slate-600 dark:text-[#d4d4d4]">Digite sua nova senha</p>
           </div>
 
-        {/* Form */}
-        <div className="bg-white rounded-2xl p-8 shadow-xl border border-slate-200">
+        <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-8 shadow-xl border border-slate-200 dark:border-[#3a3a3a]">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
                 {error}
               </div>
             )}
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-[#d4d4d4] mb-2">
                 Nova senha
               </label>
               <div className="relative w-full">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-                  <Lock className="h-5 w-5 text-slate-400" />
+                  <Lock className="h-5 w-5 text-slate-400 dark:text-[#a3a3a3]" />
                 </div>
                 <input
                   id="password"
@@ -220,13 +235,13 @@ function ResetPasswordForm() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Mínimo 6 caracteres"
                   required
-                  className="w-full h-11 pl-10 pr-11 rounded-lg border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-11 pl-10 pr-11 rounded-lg border border-slate-300 dark:border-[#3a3a3a] bg-white dark:bg-[#3a3a3a] text-slate-900 dark:text-[#f5f5f5] placeholder-slate-400 dark:placeholder-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-red-600 dark:focus:ring-red-400 focus:border-red-600 dark:focus:border-red-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center justify-center text-slate-400 hover:text-slate-600 z-10"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center justify-center text-slate-400 dark:text-[#a3a3a3] hover:text-slate-600 dark:hover:text-[#d4d4d4] z-10"
                   tabIndex={-1}
                 >
                   {showPassword ? (
@@ -239,12 +254,12 @@ function ResetPasswordForm() {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-2">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 dark:text-[#d4d4d4] mb-2">
                 Confirmar nova senha
               </label>
               <div className="relative w-full">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-                  <Lock className="h-5 w-5 text-slate-400" />
+                  <Lock className="h-5 w-5 text-slate-400 dark:text-[#a3a3a3]" />
                 </div>
                 <input
                   id="confirmPassword"
@@ -253,13 +268,13 @@ function ResetPasswordForm() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Digite a senha novamente"
                   required
-                  className="w-full h-11 pl-10 pr-11 rounded-lg border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-11 pl-10 pr-11 rounded-lg border border-slate-300 dark:border-[#3a3a3a] bg-white dark:bg-[#3a3a3a] text-slate-900 dark:text-[#f5f5f5] placeholder-slate-400 dark:placeholder-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-red-600 dark:focus:ring-red-400 focus:border-red-600 dark:focus:border-red-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center justify-center text-slate-400 hover:text-slate-600 z-10"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center justify-center text-slate-400 dark:text-[#a3a3a3] hover:text-slate-600 dark:hover:text-[#d4d4d4] z-10"
                   tabIndex={-1}
                 >
                   {showConfirmPassword ? (
@@ -294,7 +309,7 @@ function ResetPasswordForm() {
         </div>
 
           <div className="mt-6 text-center">
-            <Link href="/" className="inline-flex items-center gap-2 text-slate-600 hover:text-red-600 transition-colors text-sm">
+            <Link href="/" className="inline-flex items-center gap-2 text-slate-600 dark:text-[#d4d4d4] hover:text-red-600 dark:hover:text-red-400 transition-colors text-sm">
               <ArrowLeft className="w-4 h-4" />
               <span>Voltar para Home</span>
             </Link>
@@ -314,10 +329,10 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-50/50 flex items-center justify-center px-4 py-12">
+        <div className="min-h-screen bg-slate-50/50 dark:bg-[#1a1a1a]/50 flex items-center justify-center px-4 py-12 transition-colors duration-300">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-            <p className="text-slate-600">Carregando...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 dark:border-red-400 mx-auto mb-4"></div>
+            <p className="text-slate-600 dark:text-[#d4d4d4]">Carregando...</p>
           </div>
         </div>
       }

@@ -5,9 +5,8 @@ import { Star } from 'lucide-react'
 import type { Testimonial } from '@/database/types'
 
 /**
- * Exibe os depoimentos buscados do banco de dados
+ * Exibe depoimentos de clientes (limite 10). Avatar com fallback para UI Avatars.
  */
-
 export function TestimonialsSection() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
   const [loading, setLoading] = useState(true)
@@ -33,8 +32,8 @@ export function TestimonialsSection() {
   if (loading) {
     return (
       <div className="text-center py-12">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-        <p className="text-slate-600 mt-4">Carregando depoimentos...</p>
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 dark:border-red-400"></div>
+        <p className="text-slate-600 dark:text-[#d4d4d4] mt-4">Carregando depoimentos...</p>
       </div>
     )
   }
@@ -48,25 +47,26 @@ export function TestimonialsSection() {
       {testimonials.map((testimonial) => (
         <div
           key={testimonial.id}
-          className="bg-white rounded-2xl p-6 border border-slate-200 hover:shadow-xl hover:border-red-200 transition-all duration-300 relative overflow-hidden group"
+          className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-6 border border-slate-200 dark:border-[#3a3a3a] hover:shadow-xl dark:hover:shadow-2xl hover:border-red-200 dark:hover:border-red-800 transition-all duration-300 relative overflow-hidden group"
         >
-          {/* Elemento decorativo */}
-          <div className="absolute top-0 right-0 w-20 h-20 bg-red-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          {/* Elemento decorativo que aparece no hover */}
+
+          <div className="absolute top-0 right-0 w-20 h-20 bg-red-50 dark:bg-red-900/20 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-4">
               <div className="flex gap-1">
                 {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-red-600 text-red-600" />
+                  <Star key={i} className="w-4 h-4 fill-red-600 dark:fill-red-400 text-red-600 dark:text-red-400" />
                 ))}
               </div>
             </div>
 
-            <p className="text-slate-700 mb-6 italic leading-relaxed text-base">
+            <p className="text-slate-700 dark:text-[#d4d4d4] mb-6 italic leading-relaxed text-base">
               "{testimonial.content}"
             </p>
 
-            <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+            <div className="flex items-center gap-3 pt-4 border-t border-slate-100 dark:border-[#3a3a3a]">
               <img
                 src={
                   testimonial.image_url ||
@@ -79,8 +79,8 @@ export function TestimonialsSection() {
                 }}
               />
               <div>
-                <p className="font-semibold text-slate-900 text-base">{testimonial.name}</p>
-                <p className="text-sm text-slate-500">{testimonial.role}</p>
+                <p className="font-semibold text-slate-900 dark:text-[#f5f5f5] text-base">{testimonial.name}</p>
+                <p className="text-sm text-slate-500 dark:text-[#a3a3a3]">{testimonial.role}</p>
               </div>
             </div>
           </div>

@@ -14,11 +14,11 @@ import { ArrowLeft } from 'lucide-react'
 
 export default function CalculadoraBebidasPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a] transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-vermelho-hover hover:text-vermelho-vibrante transition-colors mb-6"
+          className="inline-flex items-center gap-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Voltar para Home

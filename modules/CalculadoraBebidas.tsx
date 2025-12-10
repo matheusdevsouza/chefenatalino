@@ -34,7 +34,7 @@ export function CalculadoraBebidas() {
   const [nivel, setNivel] = useState<'moderado' | 'alto'>('moderado')
   const [resultado, setResultado] = useState<CalculoBebidas | null>(null)
 
-  const calcular = () => {
+  const calcular = async () => {
     if (!bebem || !naoBebem || !duracao) {
       return
     }
@@ -77,12 +77,10 @@ export function CalculadoraBebidas() {
     setResultado(calculo)
 
     try {
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
       await fetch('/api/drinks/save', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(userId && { 'x-user-id': userId }),
         },
         body: JSON.stringify({
           pessoas_bebem: numBebem,
@@ -148,22 +146,22 @@ export function CalculadoraBebidas() {
           type="number"
           value={bebem}
           onChange={setBebem}
-          min="0"
+          min={0}
         />
         <Input
           label="Pessoas que Não Bebem"
           type="number"
           value={naoBebem}
           onChange={setNaoBebem}
-          min="0"
+          min={0}
         />
         <Input
           label="Duração da Festa (horas)"
           type="number"
           value={duracao}
           onChange={setDuracao}
-          min="1"
-          step="0.5"
+          min={1}
+          step={0.5}
           placeholder="Ex: 4.5"
         />
         <div className="flex flex-col gap-2">
@@ -175,10 +173,10 @@ export function CalculadoraBebidas() {
             onChange={(e) => setNivel(e.target.value as 'moderado' | 'alto')}
             className="
               w-full px-4 py-3 rounded-xl
-              bg-white border border-vermelho-vibrante/20
-              text-vermelho-escuro
-              focus:outline-none focus:ring-2 focus:ring-vermelho-vibrante/20
-              focus:border-vermelho-vibrante
+              bg-white dark:bg-[#3a3a3a] border border-vermelho-vibrante/20 dark:border-red-400/20
+              text-vermelho-escuro dark:text-[#f5f5f5]
+              focus:outline-none focus:ring-2 focus:ring-vermelho-vibrante/20 dark:focus:ring-red-400/20
+              focus:border-vermelho-vibrante dark:focus:border-red-400
               transition-all duration-300
               shadow-sm
             "

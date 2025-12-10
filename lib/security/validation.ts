@@ -73,12 +73,24 @@ export const ceiaInputSchema = z.object({
     .regex(/^\d+(\.\d{1,2})?$/, 'Formato inválido')
     .transform(Number)
     .pipe(z.number().min(0).max(100000)),
-  horario: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Horário inválido'),
+  horario: z
+    .string()
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Horário inválido')
+    .refine((val) => !detectSQLInjection(val), { message: 'Horário contém padrões suspeitos' }),
   restricoes: z
     .string()
     .max(500, 'Restrições muito longas')
+    .refine((val) => !detectSQLInjection(val) && !detectNoSQLInjection(val), { message: 'Restrições contêm padrões suspeitos' })
+    .transform((val) => sanitizeInput(val || ''))
     .optional()
     .default(''),
+  title: z
+    .string()
+    .max(200, 'Título muito longo')
+    .refine((val) => !detectSQLInjection(val) && !detectNoSQLInjection(val), { message: 'Título contém padrões suspeitos' })
+    .transform((val) => sanitizeInput(val || ''))
+    .optional()
+    .nullable(),
 })
 
 /**
@@ -93,16 +105,28 @@ export const mensagensInputSchema = z.object({
     .string()
     .min(2, 'Destinatário deve ter no mínimo 2 caracteres')
     .max(100, 'Destinatário muito longo')
-    .refine(
-      (val) => {
-        const sanitized = DOMPurify.sanitize(val, { ALLOWED_TAGS: [] })
-        return sanitized === val
-      },
-      { message: 'Caracteres inválidos detectados' }
-    ),
+    .refine((val) => {
+      if (detectSQLInjection(val)) return false
+      if (detectNoSQLInjection(val)) return false
+      const sanitized = DOMPurify.sanitize(val, { ALLOWED_TAGS: [] })
+      return sanitized === val
+    }, { message: 'Destinatário contém caracteres inválidos ou padrões suspeitos' })
+    .transform((val) => sanitizeInput(val)),
   tom: z.enum(['formal', 'engracado', 'emocionante'], {
     errorMap: () => ({ message: 'Tom inválido' }),
   }),
+  mensagens: z
+    .array(z.string().max(5000, 'Mensagem muito longa'))
+    .max(10, 'Máximo de 10 mensagens')
+    .optional()
+    .default([]),
+  mensagem_selecionada: z
+    .number()
+    .int()
+    .min(0)
+    .max(9)
+    .optional()
+    .nullable(),
 })
 
 /**
@@ -113,12 +137,12 @@ export const mensagensInputSchema = z.object({
  */
 
 export const bebidasInputSchema = z.object({
-  bebem: z
+  pessoas_bebem: z
     .string()
     .regex(/^\d+$/, 'Deve ser um número')
     .transform(Number)
     .pipe(z.number().int().min(0).max(1000)),
-  naoBebem: z
+  pessoas_nao_bebem: z
     .string()
     .regex(/^\d+$/, 'Deve ser um número')
     .transform(Number)
@@ -130,7 +154,7 @@ export const bebidasInputSchema = z.object({
     .pipe(z.number().min(0.5).max(24)),
   nivel: z.enum(['moderado', 'alto'], {
     errorMap: () => ({ message: 'Nível inválido' }),
-  }),
+  }).optional().default('moderado'),
 })
 
 /**

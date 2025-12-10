@@ -2,46 +2,31 @@ import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { getUserByEmail } from '@/lib/db/queries'
 import { setAPIHeaders } from '@/lib/security/headers'
+import { encrypt, createSearchableHash } from '@/lib/security/encryption'
+import { registerSchema, validateInput } from '@/lib/security/inputValidator'
+import { sendVerificationEmail } from '@/lib/email/verification'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, email, password } = body
-
-    if (!name || !email || !password) {
+    
+    /**
+     * Validação Zod com detecção de SQL injection e sanitização.
+     */
+    let validatedData
+    try {
+      validatedData = validateInput(registerSchema, body)
+    } catch (validationError: any) {
       const response = NextResponse.json(
-        { error: 'Nome, email e senha são obrigatórios', success: false },
+        { error: validationError.message || 'Dados inválidos', success: false },
         { status: 400 }
       )
       return setAPIHeaders(response)
     }
 
-    if (name.trim().length < 2) {
-      const response = NextResponse.json(
-        { error: 'Nome deve ter pelo menos 2 caracteres', success: false },
-        { status: 400 }
-      )
-      return setAPIHeaders(response)
-    }
+    const { name, email, password, phone } = validatedData
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email.trim().toLowerCase())) {
-      const response = NextResponse.json(
-        { error: 'Email inválido', success: false },
-        { status: 400 }
-      )
-      return setAPIHeaders(response)
-    }
-
-    if (password.length < 6) {
-      const response = NextResponse.json(
-        { error: 'Senha deve ter pelo menos 6 caracteres', success: false },
-        { status: 400 }
-      )
-      return setAPIHeaders(response)
-    }
-
-    const existingUser = await getUserByEmail(email.trim().toLowerCase())
+    const existingUser = await getUserByEmail(email)
     if (existingUser) {
       const response = NextResponse.json(
         { error: 'Este email já está cadastrado', success: false },
@@ -65,13 +50,23 @@ export async function POST(request: NextRequest) {
       return setAPIHeaders(response)
     }
 
+    /**
+     * Tamanhos máximos: name (500), email (320), phone (20).
+     */
+    const encryptedName = encrypt(name, 500)
+    const encryptedEmail = encrypt(email, 320) 
+    const encryptedPhone = phone ? encrypt(phone.substring(0, 20), 20) : null 
+    const emailHash = createSearchableHash(email)
+    
     const result = await query(
-      `INSERT INTO users (name, email, password_hash, is_active) 
-       VALUES ($1, $2, $3, $4) 
+      `INSERT INTO users (name, email, email_hash, phone, password_hash, is_active) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING id, name, email, avatar_url, email_verified, created_at`,
       [
-        name.trim(),
-        email.trim().toLowerCase(),
+        encryptedName,
+        encryptedEmail,
+        emailHash,
+        encryptedPhone,
         password_hash,
         true
       ]
@@ -87,17 +82,32 @@ export async function POST(request: NextRequest) {
       return setAPIHeaders(response)
     }
 
+    /**
+     * Não falha o registro se email falhar - usuário pode solicitar reenvio depois.
+     */
+    try {
+      await sendVerificationEmail(user.id, email, name)
+    } catch (emailError) {
+      console.error('Erro ao enviar email de verificação:', emailError)
+    }
+
+    /**
+     * Não criar tokens JWT - usuário precisa verificar email primeiro.
+     * Previne criação de contas com emails inválidos.
+     */
     const response = NextResponse.json({
       success: true,
       user: {
         id: user.id,
-        name: user.name,
-        email: user.email,
-        avatar_url: user.avatar_url,
-        email_verified: user.email_verified
+        name: name, 
+        email: email, 
+        avatar_url: null,
+        email_verified: false 
       },
-      message: 'Conta criada com sucesso'
+      message: 'Conta criada com sucesso! Verifique seu email para ativar sua conta.',
+      requiresEmailVerification: true
     })
+
     return setAPIHeaders(response)
   } catch (error: any) {
     console.error('Erro ao registrar usuário:', error)

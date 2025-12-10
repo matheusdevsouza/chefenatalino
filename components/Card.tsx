@@ -4,11 +4,11 @@ import React from 'react'
  * Propriedades do componente Card.
  * 
  * @interface CardProps
- * @property {React.ReactNode} children 
- * @property {string} [className]
- * @property {boolean} [hover=true]
- * @property {'default' | 'elevated' | 'subtle'} [variant='default']
- * @property {boolean} [glow=false]
+ * @property {React.ReactNode} children - Conteúdo do card
+ * @property {string} [className] - Classes CSS adicionais
+ * @property {boolean} [hover=true] - Habilita efeito hover
+ * @property {'default' | 'elevated' | 'subtle'} [variant='default'] - Variante visual
+ * @property {boolean} [glow=false] - Adiciona efeito de brilho (não implementado ainda)
  */
 interface CardProps {
   children: React.ReactNode
@@ -21,8 +21,11 @@ interface CardProps {
 /**
  * Componente de card com design limpo e moderno.
  * 
- * Renderiza um container estilizado com bordas sutis e sombras suaves.
- * Suporta múltiplas variantes visuais e efeitos de hover opcionais.
+ * Características:
+ * - 3 variantes: default (card padrão), elevated (elevado), subtle (sutil)
+ * - Efeito hover opcional com transição suave
+ * - Usa classes CSS customizadas definidas no globals.css
+ * - Design responsivo e acessível
  * 
  * @param {CardProps} props 
  * @returns {JSX.Element} 

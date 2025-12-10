@@ -4,6 +4,7 @@ import React from 'react'
 import { Lock } from 'lucide-react'
 import { Button } from './Button'
 import { useApp } from '@/context/AppContext'
+import { useModal } from '@/context/ModalContext'
 
 /**
  * Propriedades do componente Paywall.
@@ -31,36 +32,43 @@ interface PaywallProps {
 
 export function Paywall({ children, moduleName = 'conteúdo' }: PaywallProps) {
   const { isPaid, setIsPaid } = useApp()
+  const { showConfirm } = useModal()
 
   const handleUnlock = async () => {
-    if (confirm('Deseja liberar o acesso premium por R$ 19,90?')) {
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
-      
-      if (!userId) {
-        const newUserId = crypto.randomUUID()
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('user_id', newUserId)
+    showConfirm({
+      message: 'Deseja liberar o acesso premium por R$ 19,90?',
+      title: 'Confirmar Acesso Premium',
+      confirmText: 'Confirmar',
+      cancelText: 'Cancelar',
+      onConfirm: async () => {
+        const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+        
+        if (!userId) {
+          const newUserId = crypto.randomUUID()
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('user_id', newUserId)
+          }
         }
-      }
 
-      setIsPaid(true)
-      
-      try {
-        const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
-        if (currentUserId) {
-          await fetch('/api/user/subscription', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-user-id': currentUserId,
-            },
-            body: JSON.stringify({ action: 'upgrade' }),
-          })
+        setIsPaid(true)
+        
+        try {
+          const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+          if (currentUserId) {
+            await fetch('/api/user/subscription', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': currentUserId,
+              },
+              body: JSON.stringify({ action: 'upgrade' }),
+            })
+          }
+        } catch (error) {
+          console.error('Erro ao processar upgrade:', error)
         }
-      } catch (error) {
-        console.error('Erro ao processar upgrade:', error)
-      }
-    }
+      },
+    })
   }
 
   if (isPaid) {

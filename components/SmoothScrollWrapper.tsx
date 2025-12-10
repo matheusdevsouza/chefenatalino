@@ -3,10 +3,16 @@
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 
+/**
+ * Adiciona scroll suave usando Lenis. Integra com GSAP ScrollTrigger e intercepta links âncora.
+ */
 export default function SmoothScrollWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const initializedRef = useRef(false)
 
+  /**
+   * Aguarda 100ms antes de carregar Lenis para evitar conflitos. Integra com ScrollTrigger.
+   */
   useEffect(() => {
     if (typeof window === 'undefined') return
     
@@ -14,6 +20,9 @@ export default function SmoothScrollWrapper({ children }: { children: React.Reac
     let rafId: number | undefined
     let handleAnchorClick: ((e: MouseEvent) => void) | null = null
 
+    /**
+     * Intercepta cliques em links âncora (#). Offset -80px compensa header fixo.
+     */
     handleAnchorClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
       const link = target.closest('a[href^="#"]') as HTMLAnchorElement
@@ -56,10 +65,16 @@ export default function SmoothScrollWrapper({ children }: { children: React.Reac
             infinite: false,
           })
 
+          /**
+           * Integra Lenis com GSAP ScrollTrigger.
+           * 
+           * Atualiza ScrollTrigger quando Lenis faz scroll, com throttle de 16ms
+           * para evitar atualizações excessivas (60fps = ~16ms por frame).
+           */
           import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => {
             if (lenis) {
               let lastUpdate = 0
-              const throttleMs = 16 // ~60fps para suavizar animações
+              const throttleMs = 16
               
               lenis.on('scroll', () => {
                 const now = Date.now()
@@ -70,8 +85,17 @@ export default function SmoothScrollWrapper({ children }: { children: React.Reac
               })
             }
           }).catch(() => {
+            /**
+             * ScrollTrigger é opcional, não quebra se não estiver disponível.
+             */
           })
 
+          /**
+           * Loop de animação do Lenis.
+           * 
+           * Chama lenis.raf() a cada frame para atualizar posição do scroll.
+           * Continua até que lenis seja destruído.
+           */
           const raf = (time: number) => {
             if (lenis) {
               lenis.raf(time)
@@ -98,6 +122,13 @@ export default function SmoothScrollWrapper({ children }: { children: React.Reac
       })
     }, 100)
 
+    /**
+     * Cleanup: remove listeners e destroi Lenis.
+     * 
+     * Executado quando:
+     * - Componente desmonta
+     * - Rota muda (pathname muda)
+     */
     return () => {
       clearTimeout(timeoutId)
       if (handleAnchorClick) {
@@ -113,6 +144,9 @@ export default function SmoothScrollWrapper({ children }: { children: React.Reac
             delete (window as any).lenis
           }
         } catch (e) {
+          /**
+           * Ignora erros no cleanup para não quebrar o processo de limpeza.
+           */
         }
       }
       initializedRef.current = false

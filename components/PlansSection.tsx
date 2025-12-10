@@ -17,14 +17,15 @@ interface PlanFeatures {
 }
 
 /**
- * Exibe os planos de assinatura buscados do banco de dados
+ * Exibe planos de assinatura. Destaca plano "Mais Popular" (meio) e identifica plano ativo do usuário.
  */
-
 export function PlansSection() {
   const router = useRouter()
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [loading, setLoading] = useState(true)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [activePlanId, setActivePlanId] = useState<string | null>(null)
+  const [loadingPlan, setLoadingPlan] = useState(true)
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -45,11 +46,40 @@ export function PlansSection() {
   }, [])
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const userId = localStorage.getItem('user_id')
-      const userEmail = localStorage.getItem('user_email')
-      setIsLoggedIn(!!(userId && userEmail))
+    const checkUserStatus = async () => {
+      if (typeof window !== 'undefined') {
+        const userId = localStorage.getItem('user_id')
+        const userEmail = localStorage.getItem('user_email')
+        const isLogged = !!(userId && userEmail)
+        setIsLoggedIn(isLogged)
+
+        /**
+         * Se estiver logado, buscar o plano ativo do usuário.
+         * 
+         * Erro 401 é esperado se o usuário não estiver autenticado,
+         * não é tratado como erro crítico.
+         */
+        if (isLogged) {
+          try {
+            const response = await fetch('/api/user/current-plan', {
+              credentials: 'include',
+            })
+            const data = await response.json()
+            if (data.success && data.planId) {
+              setActivePlanId(data.planId)
+            }
+          } catch (error) {
+            console.error('Erro ao buscar plano ativo:', error)
+          } finally {
+            setLoadingPlan(false)
+          }
+        } else {
+          setLoadingPlan(false)
+        }
+      }
     }
+
+    checkUserStatus()
   }, [])
 
   const formatPrice = (price: number) => {
@@ -74,8 +104,8 @@ export function PlansSection() {
   }
 
   const renderFeature = (label: string, value: any, isPopular: boolean) => {
-    const checkColor = isPopular ? 'text-white' : 'text-red-600'
-    const textColor = isPopular ? 'text-white/90' : 'text-slate-700'
+    const checkColor = isPopular ? 'text-white' : 'text-red-600 dark:text-red-400'
+    const textColor = isPopular ? 'text-white/90 dark:text-white/80' : 'text-slate-700 dark:text-[#d4d4d4]'
     
     if (typeof value === 'boolean' && value) {
       return (
@@ -112,11 +142,11 @@ export function PlansSection() {
     return null
   }
 
-  if (loading) {
+  if (loading || loadingPlan) {
     return (
       <div className="text-center py-12">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-        <p className="text-slate-600 mt-4">Carregando planos...</p>
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 dark:border-red-400"></div>
+        <p className="text-slate-600 dark:text-[#d4d4d4] mt-4">Carregando planos...</p>
       </div>
     )
   }
@@ -132,36 +162,37 @@ export function PlansSection() {
       {plans.map((plan, idx) => {
         const features = getFeatures(plan)
         const isPopular = idx === popularPlanIndex
+        const isCurrentPlan = activePlanId === plan.id
         
         return (
           <div
             key={plan.id}
             className={`rounded-3xl p-6 sm:p-8 flex flex-col transition-all duration-300 ${
               isPopular
-                ? 'bg-gradient-to-br from-red-600 to-red-700 text-white relative overflow-hidden shadow-2xl border-4 border-red-500 transform scale-105 md:scale-100 lg:scale-105'
-                : 'bg-white border-2 border-slate-200 hover:border-red-300 hover:shadow-xl'
+                ? 'bg-gradient-to-br from-red-600 to-red-700 dark:from-red-700 dark:to-red-800 text-white relative overflow-hidden shadow-2xl transform scale-105 md:scale-100 lg:scale-105 border-2 border-white dark:border-white/20'
+                : 'bg-white dark:bg-[#2e2e2e] border-2 border-slate-200 dark:border-[#3a3a3a] hover:border-red-300 dark:hover:border-red-800 hover:shadow-xl dark:hover:shadow-2xl'
             }`}
           >
             {isPopular && (
-              <div className="absolute top-0 right-0 bg-yellow-400 text-red-900 px-4 py-1 rounded-bl-2xl font-bold text-xs uppercase tracking-wider">
+              <div className="absolute top-0 right-0 bg-yellow-400 dark:bg-yellow-500 text-red-900 dark:text-red-950 px-4 py-1 rounded-bl-2xl font-bold text-xs uppercase tracking-wider">
                 Mais Popular
               </div>
             )}
 
             <div className={`mb-6 ${isPopular ? 'relative z-10' : ''}`}>
-              <h3 className={`font-serif text-2xl mb-2 ${isPopular ? '' : 'text-slate-900'}`}>
+              <h3 className={`font-serif text-2xl mb-2 ${isPopular ? '' : 'text-slate-900 dark:text-[#f5f5f5]'}`}>
                 {plan.name}
               </h3>
-              <p className={`text-sm mb-4 ${isPopular ? 'text-white/90' : 'text-slate-600'}`}>
+              <p className={`text-sm mb-4 ${isPopular ? 'text-white/90 dark:text-white/80' : 'text-slate-600 dark:text-[#d4d4d4]'}`}>
                 {plan.description || ''}
               </p>
               <div className="mb-4">
                 <div className="flex items-baseline gap-2">
-                  <span className={`text-4xl font-bold ${isPopular ? '' : 'text-slate-900'}`}>
+                  <span className={`text-4xl font-bold ${isPopular ? '' : 'text-slate-900 dark:text-[#f5f5f5]'}`}>
                     {formatPrice(plan.price)}
                   </span>
                 </div>
-                <p className={`text-sm mt-1 ${isPopular ? 'text-white/80' : 'text-slate-500'}`}>
+                <p className={`text-sm mt-1 ${isPopular ? 'text-white/80 dark:text-white/70' : 'text-slate-500 dark:text-[#a3a3a3]'}`}>
                   por mês
                 </p>
               </div>
@@ -183,7 +214,7 @@ export function PlansSection() {
                       isPopular ? 'text-white' : 'text-red-600'
                     }`}
                   />
-                  <span className={isPopular ? 'text-white/90 text-sm' : 'text-slate-700 text-sm'}>
+                  <span className={isPopular ? 'text-white/90 dark:text-white/80 text-sm' : 'text-slate-700 dark:text-[#d4d4d4] text-sm'}>
                     {features.suporte === 'email' && 'Suporte por email'}
                     {features.suporte === 'prioritario' && 'Suporte prioritário'}
                     {features.suporte === 'prioritario_24_7' && 'Suporte prioritário 24/7'}
@@ -194,10 +225,10 @@ export function PlansSection() {
                 <div className="flex items-start gap-2">
                   <Check
                     className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                      isPopular ? 'text-white' : 'text-red-600'
+                      isPopular ? 'text-white' : 'text-red-600 dark:text-red-400'
                     }`}
                   />
-                  <span className={isPopular ? 'text-white/90 text-sm' : 'text-slate-700 text-sm'}>
+                  <span className={isPopular ? 'text-white/90 dark:text-white/80 text-sm' : 'text-slate-700 dark:text-[#d4d4d4] text-sm'}>
                     Novas funcionalidades primeiro
                   </span>
                 </div>
@@ -206,10 +237,10 @@ export function PlansSection() {
                 <div className="flex items-start gap-2">
                   <Check
                     className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                      isPopular ? 'text-white' : 'text-red-600'
+                      isPopular ? 'text-white' : 'text-red-600 dark:text-red-400'
                     }`}
                   />
-                  <span className={isPopular ? 'text-white/90 text-sm' : 'text-slate-700 text-sm'}>
+                  <span className={isPopular ? 'text-white/90 dark:text-white/80 text-sm' : 'text-slate-700 dark:text-[#d4d4d4] text-sm'}>
                     Acesso beta a novas funcionalidades
                   </span>
                 </div>
@@ -217,37 +248,39 @@ export function PlansSection() {
             </div>
 
             <div className="mt-auto">
-              {isLoggedIn ? (
-                <Button
-                  size="lg"
-                  variant="ghost"
-                  disabled
-                  className={`w-full text-base py-5 font-semibold rounded-xl opacity-50 cursor-not-allowed ${
-                    isPopular
-                      ? 'bg-white text-red-600'
-                      : 'border-2 border-red-600 text-red-600'
-                  }`}
-                >
-                  Já está logado
-                </Button>
-              ) : (
-                <Button
-                  size="lg"
-                  variant="ghost"
-                  onClick={(e) => {
+              <Button
+                size="lg"
+                variant="ghost"
+                disabled={isCurrentPlan}
+                onClick={(e) => {
+                  if (!isCurrentPlan) {
                     e.preventDefault()
                     router.push(`/checkout?plan=${plan.slug}`)
-                  }}
-                  className={`w-full text-base py-5 font-semibold rounded-xl ${
-                    isPopular
-                      ? 'bg-white text-red-600 hover:bg-white/90'
-                      : 'border-2 border-red-600 text-red-600 hover:bg-red-50'
-                  }`}
-                >
-                  Começar Agora
-                  {isPopular && <ArrowRight className="w-5 h-5 ml-2" />}
-                </Button>
-              )}
+                  }
+                }}
+                className={`w-full text-base py-5 font-semibold rounded-xl ${
+                  isCurrentPlan
+                    ? `opacity-60 cursor-not-allowed ${
+                        isPopular
+                          ? 'bg-white dark:bg-white/20 dark:text-white/70 text-red-600'
+                          : 'border-2 border-red-600 dark:border-red-500 text-red-600 dark:text-red-400'
+                      }`
+                    : `${
+                        isPopular
+                          ? 'bg-white dark:bg-white/20 text-red-600 dark:text-white hover:bg-white/90 dark:hover:bg-white/30'
+                          : 'border-2 border-red-600 dark:border-red-500 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                      }`
+                }`}
+              >
+                {isCurrentPlan ? (
+                  'Já possui'
+                ) : (
+                  <>
+                    {isLoggedIn ? 'Alterar Plano' : 'Começar Agora'}
+                    {isPopular && !isCurrentPlan && <ArrowRight className="w-5 h-5 ml-2" />}
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         )

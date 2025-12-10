@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import Link from 'next/link'
 import { 
   ChefHat, ArrowRight, Sparkles, Brain, ShoppingCart, Clock, 
@@ -17,6 +17,8 @@ import { TestimonialsSection } from '@/components/TestimonialsSection'
 import { DemoButton } from '@/components/DemoButton'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
+import { FAQItem } from '@/components/FAQItem'
+import { DemoPreview } from '@/components/DemoPreview'
 import {
   DemoProvider,
   BrainDemo,
@@ -28,6 +30,30 @@ import {
 } from '@/components/DemoCards'
 
 export default function Home() {
+
+  useEffect(() => {
+    const elements = document.querySelectorAll<HTMLElement>('[data-reveal]')
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('reveal-visible')
+          } else {
+            entry.target.classList.remove('reveal-visible')
+          }
+        })
+      },
+      { threshold: 0.2, rootMargin: '0px 0px -10% 0px' }
+    )
+
+    elements.forEach((el) => {
+      const delay = el.dataset.revealDelay
+      if (delay) el.style.setProperty('--reveal-delay', `${delay}ms`)
+      observer.observe(el)
+    })
+
+    return () => observer.disconnect()
+  }, [])
 
   const features = [
     {
@@ -120,45 +146,45 @@ export default function Home() {
   ]
 
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-vermelho-vibrante selection:text-white">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a] font-sans text-slate-900 dark:text-[#f5f5f5] selection:bg-vermelho-vibrante selection:text-white transition-colors duration-300">
       <Header />
 
-      <section id="hero-section" className="relative w-full overflow-hidden flex items-center justify-center bg-slate-50/50 pt-20 sm:pt-24 md:pt-28 pb-12 sm:pb-16 md:pb-20">
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center py-6 sm:py-8 md:py-10">
+      <section id="hero-section" className="relative w-full overflow-hidden flex items-center justify-center bg-slate-50/50 dark:bg-[#1a1a1a]/50 pt-20 sm:pt-24 md:pt-28 pb-12 sm:pb-16 md:pb-20 transition-colors duration-300">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center py-6 sm:py-8 md:py-10" data-reveal data-reveal-delay="0">
           
-          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 mb-4 sm:mb-6 rounded-full bg-white border border-red-100 shadow-sm">
-            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-red-600 animate-pulse"></span>
-            <span className="text-[10px] sm:text-xs font-semibold tracking-wide text-red-600 uppercase whitespace-nowrap">Seu Natal completo planejado por IA</span>
+          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 mb-4 sm:mb-6 rounded-full bg-white dark:bg-[#2e2e2e] border border-red-100 dark:border-red-900/30 shadow-sm">
+            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-red-600 dark:bg-red-500 animate-pulse"></span>
+            <span className="text-[10px] sm:text-xs font-semibold tracking-wide text-red-600 dark:text-red-400 uppercase whitespace-nowrap">Seu Natal completo planejado por IA</span>
           </div>
           
-          <h1 className="font-serif text-4xl sm:text-5xl md:text-7xl lg:text-8xl xl:text-9xl font-medium leading-[1.1] text-slate-900 text-center tracking-tight relative mb-4 sm:mb-6 px-2">
+          <h1 className="font-serif text-4xl sm:text-5xl md:text-7xl lg:text-8xl xl:text-9xl font-medium leading-[1.1] text-slate-900 dark:text-[#f5f5f5] text-center tracking-tight relative mb-4 sm:mb-6 px-2">
             <span className="block mb-1 sm:mb-2">O Natal perfeito,</span>
             <span className="block">planejado em</span>
-            <span className="block mt-1 sm:mt-2 text-red-600 italic font-bold">
+            <span className="block mt-1 sm:mt-2 text-red-600 dark:text-red-400 italic font-bold">
               segundos.
             </span>
           </h1>
           
           <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6 text-center max-w-2xl mx-auto w-full px-4">
-            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-slate-600 leading-relaxed font-light">
-              Diga adeus ao estresse das compras e do cronograma. Nossa <strong className="text-red-600 font-medium">Ceia Inteligente</strong> cria o cardápio completo personalizado para sua família. Além disso, organize amigo secreto e descubra os presentes perfeitos com IA.
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-slate-600 dark:text-[#d4d4d4] leading-relaxed font-light">
+              Diga adeus ao estresse das compras e do cronograma. Nossa <strong className="text-red-600 dark:text-red-400 font-medium">Ceia Inteligente</strong> cria o cardápio completo personalizado para sua família. Além disso, organize amigo secreto e descubra os presentes perfeitos com IA.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-2 sm:pt-4">
               <a href="#demo">
-                <Button size="lg" className="group text-base sm:text-lg w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white shadow-xl">
+                <Button size="lg" className="group text-base sm:text-lg w-full sm:w-auto bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500 text-white shadow-xl">
                   <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                   Ver Demo Interativa
               </Button>
               </a>
             </div>
-            <p className="text-sm text-slate-500 mt-2">Experimente todas as funcionalidades • Sem cadastro necessário</p>
+            <p className="text-sm text-slate-500 dark:text-[#a3a3a3] mt-2">Experimente todas as funcionalidades • Sem cadastro necessário</p>
             
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm text-slate-400 pt-4 sm:pt-6 px-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm text-slate-400 dark:text-[#a3a3a3] pt-4 sm:pt-6 px-4">
               <div className="flex -space-x-2">
-                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-slate-200 border-2 border-white"></div>
-                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-slate-300 border-2 border-white"></div>
-                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-slate-400 border-2 border-white"></div>
+                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-slate-200 dark:bg-[#3a3a3a] border-2 border-white dark:border-[#2e2e2e]"></div>
+                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-slate-300 dark:bg-[#3a3a3a] border-2 border-white dark:border-[#2e2e2e]"></div>
+                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-slate-400 dark:bg-[#525252] border-2 border-white dark:border-[#2e2e2e]"></div>
               </div>
               <p className="whitespace-nowrap">+2.000 famílias já organizaram seu Natal</p>
             </div>
@@ -166,137 +192,141 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="relative z-30 bg-slate-50/50">
+      <div className="relative z-30 bg-slate-50/50 dark:bg-[#1a1a1a]/50 transition-colors duration-300">
         
-        <section id="ceia-inteligente" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/50">
+        <section id="ceia-inteligente" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/50 dark:bg-[#1a1a1a]/50 transition-colors duration-300">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12 md:mb-16">
-              <span className="text-red-600 font-semibold tracking-wider text-xs sm:text-sm uppercase">Funcionalidades</span>
-              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl mt-3 mb-4 sm:mb-6 text-slate-900 px-2">Por que é "Inteligente"?</h2>
-              <p className="text-slate-600 text-base sm:text-lg px-2">Nossa IA não apenas sugere receitas. Ela orquestra todo o evento, considerando gostos, alergias, orçamento e tempo disponível. Além disso, facilita a organização do Natal completo: desde a ceia até os presentes e amigo secreto.</p>
+            <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12 md:mb-16" data-reveal>
+              <span className="text-red-600 dark:text-red-400 font-semibold tracking-wider text-xs sm:text-sm uppercase">Funcionalidades</span>
+              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl mt-3 mb-4 sm:mb-6 text-slate-900 dark:text-[#f5f5f5] px-2">Por que é "Inteligente"?</h2>
+              <p className="text-slate-600 dark:text-[#d4d4d4] text-base sm:text-lg px-2">Nossa IA não apenas sugere receitas. Ela orquestra todo o evento, considerando gostos, alergias, orçamento e tempo disponível. Além disso, facilita a organização do Natal completo: desde a ceia até os presentes e amigo secreto.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 auto-rows-[auto] md:auto-rows-[250px]">
               
-              <div className="md:col-span-2 lg:col-span-2 md:row-span-2 bg-red-50 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-red-100 flex flex-col justify-between overflow-hidden relative group hover:shadow-xl transition-all duration-300 min-h-[280px] md:min-h-0">
+              <div className="md:col-span-2 lg:col-span-2 md:row-span-2 bg-red-50 dark:bg-red-900/20 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-red-100 dark:border-red-900/30 flex flex-col justify-between overflow-hidden relative group hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 min-h-[280px] md:min-h-0" data-reveal data-reveal-delay="0">
                 <div className="relative z-10">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-600 text-white rounded-xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-600 dark:bg-red-500 text-white rounded-xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
                     <Brain className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
-                  <h3 className="font-serif text-2xl sm:text-3xl mb-2 text-slate-900">O Cérebro do Natal</h3>
-                  <p className="text-slate-700 max-w-md text-sm sm:text-base">Uma inteligência artificial treinada com milhares de combinações natalinas. Ela entende "sem uva passa" ou "vovó diabética" instantaneamente e gera <strong>modo de preparo completo</strong> para cada receita.</p>
+                  <h3 className="font-serif text-2xl sm:text-3xl mb-2 text-slate-900 dark:text-[#f5f5f5]">O Cérebro do Natal</h3>
+                  <p className="text-slate-700 dark:text-[#d4d4d4] max-w-md text-sm sm:text-base">Uma inteligência artificial treinada com milhares de combinações natalinas. Ela entende "sem uva passa" ou "vovó diabética" instantaneamente e gera <strong className="text-slate-900 dark:text-[#f5f5f5]">modo de preparo completo</strong> para cada receita.</p>
                 </div>
-                <div className="absolute bottom-0 right-0 w-48 h-48 sm:w-64 sm:h-64 bg-red-600/5 rounded-full blur-3xl group-hover:bg-red-600/10 transition-all duration-500"></div>
+                <div className="absolute bottom-0 right-0 w-48 h-48 sm:w-64 sm:h-64 bg-red-600/5 dark:bg-red-500/10 rounded-full blur-3xl group-hover:bg-red-600/10 dark:group-hover:bg-red-500/20 transition-all duration-500"></div>
                 
                 <div className="flex flex-wrap gap-2 mt-4 sm:mt-6">
                   {features[0].tags?.map((tag, idx) => (
-                    <span key={idx} className="bg-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-sm text-xs sm:text-sm text-slate-700 border border-slate-100">
+                    <span key={idx} className="bg-white dark:bg-[#2e2e2e] px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-sm text-xs sm:text-sm text-slate-700 dark:text-[#d4d4d4] border border-slate-100 dark:border-[#3a3a3a]">
                       {tag}
                     </span>
                   ))}
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-200 hover:border-red-200 hover:shadow-lg transition-all duration-300 flex flex-col justify-center group min-h-[200px] md:min-h-0">
-                <div className="w-10 h-10 bg-red-50 text-red-600 rounded-lg flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-red-100 group-hover:scale-110 transition-all">
+              <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-[#3a3a3a] hover:border-red-200 dark:hover:border-red-800 hover:shadow-lg dark:hover:shadow-xl transition-all duration-300 flex flex-col justify-center group min-h-[200px] md:min-h-0" data-reveal data-reveal-delay="80">
+                <div className="w-10 h-10 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-red-100 dark:group-hover:bg-red-900/40 group-hover:scale-110 transition-all">
                   <ShoppingCart className="w-5 h-5" />
                 </div>
-                <h4 className="font-bold text-base sm:text-lg mb-1 text-slate-900">Lista Automática</h4>
-                <p className="text-xs sm:text-sm text-slate-600">Gera a lista exata de ingredientes baseada no número de convidados. Zero desperdício.</p>
+                <h4 className="font-bold text-base sm:text-lg mb-1 text-slate-900 dark:text-[#f5f5f5]">Lista Automática</h4>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-[#d4d4d4]">Gera a lista exata de ingredientes baseada no número de convidados. Zero desperdício.</p>
               </div>
 
-              <div className="bg-red-600 text-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col justify-center relative overflow-hidden group hover:shadow-xl transition-all duration-300 min-h-[200px] md:min-h-0">
+              <div className="bg-red-600 dark:bg-red-700 text-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col justify-center relative overflow-hidden group hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 min-h-[200px] md:min-h-0" data-reveal data-reveal-delay="140">
                 <div className="relative z-10">
-                  <div className="w-10 h-10 bg-white/20 text-white rounded-lg flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
+                  <div className="w-10 h-10 bg-white/20 dark:bg-white/10 text-white rounded-lg flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
                     <Clock className="w-5 h-5" />
                   </div>
                   <h4 className="font-bold text-base sm:text-lg mb-1">Cronograma</h4>
-                  <p className="text-xs sm:text-sm text-white/90">Saiba exatamente quando colocar o peru no forno para servir às 00:00.</p>
+                  <p className="text-xs sm:text-sm text-white/90 dark:text-white/80">Saiba exatamente quando colocar o peru no forno para servir às 00:00.</p>
                 </div>
-                <Clock className="absolute -bottom-4 -right-4 w-24 h-24 sm:w-32 sm:h-32 text-white/10 group-hover:w-40 group-hover:h-40 sm:group-hover:w-48 sm:group-hover:h-48 transition-all duration-300 ease-out" />
+                <Clock className="absolute -bottom-4 -right-4 w-24 h-24 sm:w-32 sm:h-32 text-white/10 dark:text-white/5 group-hover:w-40 group-hover:h-40 sm:group-hover:w-48 sm:group-hover:h-48 transition-all duration-300 ease-out" />
               </div>
 
-              <div className="md:col-span-2 bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-slate-200 hover:border-red-200 hover:shadow-lg transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center justify-between group gap-4">
+              <div className="md:col-span-2 bg-white dark:bg-[#2e2e2e] rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-[#3a3a3a] hover:border-red-200 dark:hover:border-red-800 hover:shadow-lg dark:hover:shadow-xl transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center justify-between group gap-4" data-reveal data-reveal-delay="200">
                 <div>
-                  <div className="w-10 h-10 bg-red-50 text-red-600 rounded-lg flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-red-100 group-hover:scale-110 transition-all">
+                  <div className="w-10 h-10 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-red-100 dark:group-hover:bg-red-900/40 group-hover:scale-110 transition-all">
                     <Users className="w-5 h-5" />
                   </div>
-                  <h4 className="font-serif text-xl sm:text-2xl mb-2 text-slate-900">Gestão de Convidados</h4>
-                  <p className="text-sm sm:text-base text-slate-600">Confirme presenças e calcule quantidades automaticamente.</p>
+                  <h4 className="font-serif text-xl sm:text-2xl mb-2 text-slate-900 dark:text-[#f5f5f5]">Gestão de Convidados</h4>
+                  <p className="text-sm sm:text-base text-slate-600 dark:text-[#d4d4d4]">Confirme presenças e calcule quantidades automaticamente.</p>
                 </div>
                 <div className="hidden sm:flex -space-x-3">
-                  <div className="w-12 h-12 rounded-full bg-slate-100 border-4 border-white"></div>
-                  <div className="w-12 h-12 rounded-full bg-slate-200 border-4 border-white"></div>
-                  <div className="w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center font-bold border-4 border-white text-sm">+12</div>
+                  <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#3a3a3a] border-4 border-white dark:border-[#2e2e2e]"></div>
+                  <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-[#3a3a3a] border-4 border-white dark:border-[#2e2e2e]"></div>
+                  <div className="w-12 h-12 rounded-full bg-red-600 dark:bg-red-500 text-white flex items-center justify-center font-bold border-4 border-white dark:border-[#2e2e2e] text-sm">+12</div>
                 </div>
               </div>
 
               {/* Funcionalidades futuras */}
-              <div className="md:col-span-2 lg:col-span-2 bg-gradient-to-br from-red-50 to-red-50/50 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-red-100 hover:shadow-xl transition-all duration-300 group min-h-[240px] md:min-h-0 flex flex-col">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-red-600 to-red-700 text-white rounded-lg flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
+              <div className="md:col-span-2 lg:col-span-2 bg-gradient-to-br from-red-50 to-red-50/50 dark:from-red-900/20 dark:to-red-900/10 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-red-100 dark:border-red-900/30 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 group min-h-[240px] md:min-h-0 flex flex-col" data-reveal data-reveal-delay="260">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-red-600 to-red-700 dark:from-red-500 dark:to-red-600 text-white rounded-lg flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
                   <Gift className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <h3 className="font-serif text-xl sm:text-2xl mb-2 text-slate-900">Sugestões de Presentes com IA</h3>
-                <p className="text-slate-700 text-sm sm:text-base">Descreva uma pessoa e seus gostos pessoais. Nossa IA analisa e sugere uma lista personalizada de presentes que ela vai adorar. Nunca mais fique sem ideias!</p>
+                <h3 className="font-serif text-xl sm:text-2xl mb-2 text-slate-900 dark:text-[#f5f5f5]">Sugestões de Presentes com IA</h3>
+                <p className="text-slate-700 dark:text-[#d4d4d4] text-sm sm:text-base">Descreva uma pessoa e seus gostos pessoais. Nossa IA analisa e sugere uma lista personalizada de presentes que ela vai adorar. Nunca mais fique sem ideias!</p>
               </div>
 
-              <div className="bg-gradient-to-br from-red-50 to-red-50/50 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-red-100 hover:shadow-xl transition-all duration-300 flex flex-col justify-center group min-h-[200px] md:min-h-0">
-                <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-700 text-white rounded-lg flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
+              <div className="bg-gradient-to-br from-red-50 to-red-50/50 dark:from-red-900/20 dark:to-red-900/10 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-red-100 dark:border-red-900/30 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 flex flex-col justify-center group min-h-[200px] md:min-h-0" data-reveal data-reveal-delay="320">
+                <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-700 dark:from-red-500 dark:to-red-600 text-white rounded-lg flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
                   <Users2 className="w-5 h-5" />
                 </div>
-                <h4 className="font-bold text-base sm:text-lg mb-1 text-slate-900">Gerador de Amigo Secreto</h4>
-                <p className="text-xs sm:text-sm text-slate-700">Sorteia automaticamente quem dá presente para quem. Configure restrições, envie convites e gerencie tudo em um só lugar. Fim da confusão!</p>
+                <h4 className="font-bold text-base sm:text-lg mb-1 text-slate-900 dark:text-[#f5f5f5]">Gerador de Amigo Secreto</h4>
+                <p className="text-xs sm:text-sm text-slate-700 dark:text-[#d4d4d4]">Sorteia automaticamente quem dá presente para quem. Configure restrições, envie convites e gerencie tudo em um só lugar. Fim da confusão!</p>
               </div>
 
-              <div className="bg-gradient-to-br from-red-50 to-red-50/50 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-red-100 hover:shadow-xl transition-all duration-300 flex flex-col justify-center group min-h-[200px] md:min-h-0">
-                <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-700 text-white rounded-lg flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
+              <div className="bg-gradient-to-br from-red-50 to-red-50/50 dark:from-red-900/20 dark:to-red-900/10 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-red-100 dark:border-red-900/30 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 flex flex-col justify-center group min-h-[200px] md:min-h-0" data-reveal data-reveal-delay="380">
+                <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-700 dark:from-red-500 dark:to-red-600 text-white rounded-lg flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
                   <Heart className="w-5 h-5" />
                 </div>
-                <h4 className="font-bold text-base sm:text-lg mb-1 text-slate-900">Mensagens de Natal</h4>
-                <p className="text-xs sm:text-sm text-slate-700">Gere mensagens personalizadas e calorosas para cartões, WhatsApp e redes sociais. Deixe a IA criar textos únicos para cada pessoa.</p>
+                <h4 className="font-bold text-base sm:text-lg mb-1 text-slate-900 dark:text-[#f5f5f5]">Mensagens de Natal</h4>
+                <p className="text-xs sm:text-sm text-slate-700 dark:text-[#d4d4d4]">Gere mensagens personalizadas e calorosas para cartões, WhatsApp e redes sociais. Deixe a IA criar textos únicos para cada pessoa.</p>
               </div>
             </div>
           </div>
         </section>
 
-        <section id="como-funciona" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-red-50/50 relative">
+        <section id="como-funciona" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-red-50/50 dark:bg-red-900/10 relative transition-colors duration-300">
           <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-10 sm:mb-12 md:mb-16">
-              <span className="text-red-600 font-semibold tracking-wider text-xs sm:text-sm uppercase">Como Funciona</span>
-              <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl mt-3 mb-4 text-slate-900 px-2">Do caos à celebração perfeita em 5 passos simples</h2>
-              <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto px-2">
+            <div className="text-center mb-10 sm:mb-12 md:mb-16" data-reveal>
+              <span className="text-red-600 dark:text-red-400 font-semibold tracking-wider text-xs sm:text-sm uppercase">Como Funciona</span>
+              <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl mt-3 mb-4 text-slate-900 dark:text-[#f5f5f5] px-2">Do caos à celebração perfeita em 5 passos simples</h2>
+              <p className="text-slate-600 dark:text-[#d4d4d4] text-base sm:text-lg max-w-2xl mx-auto px-2">
                 Veja como nossa IA inteligente transforma o planejamento da ceia em algo simples, rápido e sem estresse
               </p>
             </div>
             
             <div className="relative">
-              <div className="absolute left-8 md:left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-red-200 via-red-300 to-red-200 md:-ml-px"></div>
+              <div className="absolute left-8 md:left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-red-200 via-red-300 to-red-200 dark:from-red-900/50 dark:via-red-800/50 dark:to-red-900/50 md:-ml-px"></div>
 
               {steps.map((step, idx) => {
                 const Icon = step.icon
                 const isEven = idx % 2 === 1
                 return (
-                  <div key={idx} className="relative flex flex-col md:flex-row items-center justify-between mb-12 last:mb-0 group">
-                    <div className={`md:w-[48%] order-2 ${isEven ? 'md:order-3' : 'md:order-1'} p-6 md:p-8 bg-white rounded-2xl shadow-sm border-2 border-slate-100 hover:border-red-300 hover:shadow-lg transition-all duration-300 ${isEven ? 'text-left' : 'text-left'}`}>
+                  <div
+                    key={idx}
+                    className="relative flex flex-col md:flex-row items-center justify-between mb-12 last:mb-0 group"
+                    data-reveal
+                    data-reveal-delay={`${idx * 120}`}
+                  >
+                    <div className={`md:w-[48%] order-2 ${isEven ? 'md:order-3' : 'md:order-1'} p-6 md:p-8 bg-white dark:bg-[#2e2e2e] rounded-2xl shadow-sm border-2 border-slate-100 dark:border-[#3a3a3a] hover:border-red-300 dark:hover:border-red-700 hover:shadow-lg dark:hover:shadow-xl transition-all duration-300 ${isEven ? 'text-left' : 'text-left'}`}>
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 bg-red-600 text-white rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0">
+                        <div className="w-10 h-10 bg-red-600 dark:bg-red-500 text-white rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0">
                           {step.number}
                     </div>
-                        <h3 className="font-bold text-xl text-red-600">{step.title}</h3>
+                        <h3 className="font-bold text-xl text-red-600 dark:text-red-400">{step.title}</h3>
                       </div>
-                      <p className="text-slate-700 mb-3 leading-relaxed">{step.description}</p>
-                      <div className="flex items-start gap-2 mt-4 pt-4 border-t border-slate-100">
-                        <Sparkles className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-slate-600 italic">{step.details}</p>
+                      <p className="text-slate-700 dark:text-[#d4d4d4] mb-3 leading-relaxed">{step.description}</p>
+                      <div className="flex items-start gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-[#3a3a3a]">
+                        <Sparkles className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-slate-600 dark:text-[#a3a3a3] italic">{step.details}</p>
                       </div>
                     </div>
-                    <div className="absolute left-8 md:left-1/2 -ml-4 w-8 h-8 rounded-full bg-red-600 border-4 border-white shadow-lg z-10 order-1 md:order-2 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className="absolute left-8 md:left-1/2 -ml-4 w-8 h-8 rounded-full bg-red-600 dark:bg-red-500 border-4 border-white dark:border-[#2e2e2e] shadow-lg z-10 order-1 md:order-2 flex items-center justify-center group-hover:scale-110 transition-transform">
                       <div className="w-2 h-2 bg-white rounded-full"></div>
                     </div>
+                    {/* Espaço reservado para manter equilíbrio visual entre os lados, sem ícone */}
                     <div className={`md:w-[48%] order-3 ${isEven ? 'md:order-1' : 'md:order-3'} pl-16 md:pl-0 flex justify-start md:justify-center`}>
-                      <div className="w-20 h-20 bg-gradient-to-br from-red-100 to-red-200 rounded-2xl flex items-center justify-center text-red-600 group-hover:from-red-200 group-hover:to-red-300 group-hover:scale-110 transition-all duration-300 shadow-md">
-                        <Icon className="w-10 h-10" />
-                      </div>
+                      <div className="w-20 h-20" aria-hidden="true" />
                     </div>
                   </div>
                 )
@@ -306,12 +336,12 @@ export default function Home() {
             {/* Botão de ação após os passos */}
             <div className="mt-16 text-center">
               <div className="inline-block rounded-2xl p-6">
-                <p className="text-slate-700 mb-4 font-medium">
+                <p className="text-slate-700 dark:text-[#d4d4d4] mb-4 font-medium">
                   Pronto para começar? Todo o processo leva menos de 2 minutos!
                 </p>
                 <div className="flex justify-center">
                   <Link href="#precos">
-                    <Button size="lg" className="bg-red-600 hover:bg-red-700 text-white">
+                    <Button size="lg" className="bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500 text-white">
                       <PlayCircle className="w-5 h-5 mr-2" />
                       Ver Planos e Preços
                     </Button>
@@ -323,123 +353,148 @@ export default function Home() {
         </section>
 
         {/* Seção de Demo - Preview das funcionalidades */}
-        <section id="demo" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/50">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-10 sm:mb-12 md:mb-16">
-              <span className="text-red-600 font-semibold tracking-wider text-xs sm:text-sm uppercase">Demo Interativa</span>
-              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl mt-3 mb-4 sm:mb-6 text-slate-900 px-2">Veja o que você terá acesso</h2>
-              <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto px-2">
+        <section id="demo" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/50 dark:bg-[#1a1a1a]/50 w-full transition-colors duration-300">
+          <div className="w-full mx-auto max-w-[95%]">
+            <div className="text-center mb-10 sm:mb-12 md:mb-16" data-reveal>
+              <span className="text-red-600 dark:text-red-400 font-semibold tracking-wider text-xs sm:text-sm uppercase">Demo Interativa</span>
+              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl mt-3 mb-4 sm:mb-6 text-slate-900 dark:text-[#f5f5f5] px-2">Veja o que você terá acesso</h2>
+              <p className="text-slate-600 dark:text-[#d4d4d4] text-base sm:text-lg max-w-2xl mx-auto px-2">
                 Explore as funcionalidades que estarão disponíveis na sua assinatura. Complete cada demo para desbloquear a próxima.
               </p>
             </div>
 
             <DemoProvider>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <BrainDemo />
-                <ShoppingListDemo />
-                <ScheduleDemo />
-                <GuestsDemo />
-                <GiftSuggestionsDemo />
-                <SecretSantaDemo />
+              <div className="grid md:grid-cols-2 gap-6 lg:gap-8 w-full" data-reveal data-reveal-delay="100">
+                {/* Coluna de Preview */}
+                <div className="hidden md:block">
+                  <DemoPreview />
+                </div>
+                
+                {/* Coluna com os cards de demo */}
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 items-start" id="demo-cards-grid">
+                  <BrainDemo />
+                  <ShoppingListDemo />
+                  <ScheduleDemo />
+                  <GuestsDemo />
+                  <GiftSuggestionsDemo />
+                  <SecretSantaDemo />
+                </div>
               </div>
             </DemoProvider>
           </div>
         </section>
 
-        <section id="vantagens" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-red-50/50">
+        <section id="vantagens" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-red-50/50 dark:bg-red-900/10 transition-colors duration-300">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-10 sm:mb-12 md:mb-16">
-              <span className="text-red-600 font-semibold tracking-wider text-xs sm:text-sm uppercase">Por que você precisa disso AGORA</span>
-              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl mt-3 mb-4 sm:mb-6 text-slate-900 px-2">Economize tempo, dinheiro e estresse</h2>
-              <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto px-2">
+            <div className="text-center mb-10 sm:mb-12 md:mb-16" data-reveal>
+              <span className="text-red-600 dark:text-red-400 font-semibold tracking-wider text-xs sm:text-sm uppercase">Por que você precisa disso AGORA</span>
+              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl mt-3 mb-4 sm:mb-6 text-slate-900 dark:text-[#f5f5f5] px-2">Economize tempo, dinheiro e estresse</h2>
+              <p className="text-slate-600 dark:text-[#d4d4d4] text-base sm:text-lg max-w-2xl mx-auto px-2">
                 O Natal está chegando e cada dia que passa é menos tempo para planejar. Comece agora e tenha tudo pronto com calma.
               </p>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-              <div className="bg-white rounded-2xl p-6 border-2 border-red-200 hover:border-red-300 hover:shadow-xl transition-all duration-300 group">
-                <div className="w-12 h-12 bg-red-600 text-white rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-6 border-2 border-red-200 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-800 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 group" data-reveal data-reveal-delay="0">
+                <div className="w-12 h-12 bg-red-600 dark:bg-red-500 text-white rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <Clock className="w-6 h-6" />
                 </div>
-                <div className="text-4xl font-bold text-red-600 mb-2">8h</div>
-                <h3 className="font-bold text-lg mb-2 text-slate-900">Economize de Tempo</h3>
-                <p className="text-slate-600 text-sm">Planejamento completo em 30 segundos vs. 8 horas fazendo manualmente.</p>
+                <div className="text-4xl font-bold text-red-600 dark:text-red-400 mb-2">8h</div>
+                <h3 className="font-bold text-lg mb-2 text-slate-900 dark:text-[#f5f5f5]">Economize de Tempo</h3>
+                <p className="text-slate-600 dark:text-[#d4d4d4] text-sm">Planejamento completo em 30 segundos vs. 8 horas fazendo manualmente.</p>
               </div>
 
-              <div className="bg-white rounded-2xl p-6 border-2 border-red-200 hover:border-red-300 hover:shadow-xl transition-all duration-300 group">
-                <div className="w-12 h-12 bg-red-600 text-white rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-6 border-2 border-red-200 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-800 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 group" data-reveal data-reveal-delay="80">
+                <div className="w-12 h-12 bg-red-600 dark:bg-red-500 text-white rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <TrendingUp className="w-6 h-6" />
                 </div>
-                <div className="text-4xl font-bold text-red-600 mb-2">30%</div>
-                <h3 className="font-bold text-lg mb-2 text-slate-900">Menos Desperdício</h3>
-                <p className="text-slate-600 text-sm">Quantidades precisas calculadas automaticamente evitam compras desnecessárias.</p>
+                <div className="text-4xl font-bold text-red-600 dark:text-red-400 mb-2">30%</div>
+                <h3 className="font-bold text-lg mb-2 text-slate-900 dark:text-[#f5f5f5]">Menos Desperdício</h3>
+                <p className="text-slate-600 dark:text-[#d4d4d4] text-sm">Quantidades precisas calculadas automaticamente evitam compras desnecessárias.</p>
               </div>
 
-              <div className="bg-white rounded-2xl p-6 border-2 border-red-200 hover:border-red-300 hover:shadow-xl transition-all duration-300 group">
-                <div className="w-12 h-12 bg-red-600 text-white rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-6 border-2 border-red-200 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-800 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 group" data-reveal data-reveal-delay="140">
+                <div className="w-12 h-12 bg-red-600 dark:bg-red-500 text-white rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <Zap className="w-6 h-6" />
                 </div>
-                <div className="text-4xl font-bold text-red-600 mb-2">0%</div>
-                <h3 className="font-bold text-lg mb-2 text-slate-900">Zero Estresse</h3>
-                <p className="text-slate-600 text-sm">Aproveite o Natal de verdade enquanto nossa IA cuida de todos os detalhes.</p>
+                <div className="text-4xl font-bold text-red-600 dark:text-red-400 mb-2">0%</div>
+                <h3 className="font-bold text-lg mb-2 text-slate-900 dark:text-[#f5f5f5]">Zero Estresse</h3>
+                <p className="text-slate-600 dark:text-[#d4d4d4] text-sm">Aproveite o Natal de verdade enquanto nossa IA cuida de todos os detalhes.</p>
               </div>
 
-              <div className="bg-white rounded-2xl p-6 border-2 border-red-200 hover:border-red-300 hover:shadow-xl transition-all duration-300 group">
-                <div className="w-12 h-12 bg-red-600 text-white rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-6 border-2 border-red-200 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-800 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 group" data-reveal data-reveal-delay="200">
+                <div className="w-12 h-12 bg-red-600 dark:bg-red-500 text-white rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <FileText className="w-6 h-6" />
                 </div>
-                <div className="text-4xl font-bold text-red-600 mb-2">100%</div>
-                <h3 className="font-bold text-lg mb-2 text-slate-900">Tudo Incluído</h3>
-                <p className="text-slate-600 text-sm">Ceia, presentes, amigo secreto e mensagens - tudo em um só lugar.</p>
+                <div className="text-4xl font-bold text-red-600 dark:text-red-400 mb-2">100%</div>
+                <h3 className="font-bold text-lg mb-2 text-slate-900 dark:text-[#f5f5f5]">Tudo Incluído</h3>
+                <p className="text-slate-600 dark:text-[#d4d4d4] text-sm">Ceia, presentes, amigo secreto e mensagens - tudo em um só lugar.</p>
               </div>
             </div>
 
-            <div className="mt-12">
-              <h3 className="font-serif text-2xl md:text-3xl mb-8 text-center text-slate-900">ROI Real do Seu Investimento</h3>
+            <div className="mt-12" data-reveal>
+              <h3 className="font-serif text-2xl md:text-3xl mb-4 text-center text-slate-900 dark:text-[#f5f5f5]">ROI Real do Seu Investimento</h3>
+              <p className="text-slate-600 dark:text-[#d4d4d4] text-sm md:text-base text-center mb-6">Estimativas mensais médias por plano. Os resultados variam conforme seu uso.</p>
               <div className="grid md:grid-cols-3 gap-4 md:gap-6">
-                <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 md:p-8 border border-red-200 hover:shadow-lg transition-shadow">
-                  <div className="text-4xl md:text-5xl font-bold text-red-600 mb-2">R$ 39,99</div>
-                  <p className="text-slate-700 text-sm md:text-base">por mês</p>
+                <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 rounded-2xl p-6 md:p-7 border border-red-200 dark:border-red-900/30 hover:shadow-lg dark:hover:shadow-xl transition-shadow" data-reveal data-reveal-delay="0">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-400 mb-2">Básico</div>
+                  <div className="text-xl font-bold text-slate-900 dark:text-[#f5f5f5] mb-1">Investimento: R$ 19,99/mês</div>
+                  <div className="text-2xl md:text-3xl font-bold text-red-600 dark:text-red-400 mb-2">Até R$ 120/mês</div>
+                  <p className="text-slate-700 dark:text-[#d4d4d4] text-sm md:text-base mb-3">Economia estimada em desperdício evitado.</p>
+                  <div className="text-sm text-slate-600 dark:text-[#a3a3a3]">Tempo poupado: 2-4h/mês • Uso típico: até 3 ceias</div>
                 </div>
-                <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 md:p-8 border border-red-200 hover:shadow-lg transition-shadow">
-                  <div className="text-4xl md:text-5xl font-bold text-red-600 mb-2">R$ 200+</div>
-                  <p className="text-slate-700 text-sm md:text-base">Economizado em desperdício</p>
+                <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 rounded-2xl p-6 md:p-7 border border-red-200 dark:border-red-900/30 hover:shadow-lg dark:hover:shadow-xl transition-shadow" data-reveal data-reveal-delay="100">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">Popular</div>
+                    <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-yellow-400 dark:bg-yellow-500 text-red-900 dark:text-red-950">Mais escolhido</span>
+                  </div>
+                  <div className="text-xl font-bold text-slate-900 dark:text-[#f5f5f5] mb-1">Investimento: R$ 39,99/mês</div>
+                  <div className="text-2xl md:text-3xl font-bold text-red-600 dark:text-red-400 mb-2">Até R$ 200/mês</div>
+                  <p className="text-slate-700 dark:text-[#d4d4d4] text-sm md:text-base mb-3">Redução de compras extras e ajustes de porção.</p>
+                  <div className="text-sm text-slate-600 dark:text-[#a3a3a3]">Tempo poupado: 4-6h/mês • Uso típico: até 10 ceias</div>
                 </div>
-                <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 md:p-8 border border-red-200 hover:shadow-lg transition-shadow">
-                  <div className="text-4xl md:text-5xl font-bold text-red-600 mb-2">8 horas</div>
-                  <p className="text-slate-700 text-sm md:text-base">De tempo economizado</p>
+                <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 rounded-2xl p-6 md:p-7 border border-red-200 dark:border-red-900/30 hover:shadow-lg dark:hover:shadow-xl transition-shadow" data-reveal data-reveal-delay="180">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-400 mb-2">Premium</div>
+                  <div className="text-xl font-bold text-slate-900 dark:text-[#f5f5f5] mb-1">Investimento: R$ 69,99/mês</div>
+                  <div className="text-2xl md:text-3xl font-bold text-red-600 dark:text-red-400 mb-2">Até R$ 320/mês</div>
+                  <p className="text-slate-700 dark:text-[#d4d4d4] text-sm md:text-base mb-3">Economia para uso intensivo e eventos múltiplos.</p>
+                  <div className="text-sm text-slate-600 dark:text-[#a3a3a3]">Tempo poupado: 6-10h/mês • Uso intensivo</div>
                 </div>
               </div>
-              <p className="text-slate-600 text-sm md:text-base text-center mt-6">Economia mensal garantida com os limites do seu plano.</p>
+              <p className="text-slate-500 dark:text-[#a3a3a3] text-xs md:text-sm text-center mt-4">*Estimativas internas simuladas para este produto em desenvolvimento. Não são promessa de ganhos; resultados reais dependerão do seu uso e dos limites do plano.</p>
             </div>
           </div>
         </section>
 
-        <section id="depoimentos" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/50">
+        <section id="depoimentos" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/50 dark:bg-[#1a1a1a]/50 transition-colors duration-300">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-10 sm:mb-12 md:mb-16">
-              <span className="text-red-600 font-semibold tracking-wider text-xs sm:text-sm uppercase">Depoimentos</span>
-              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl mt-3 mb-4 sm:mb-6 text-slate-900 px-2">O que as famílias estão dizendo</h2>
-              <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto px-2">
+            <div className="text-center mb-10 sm:mb-12 md:mb-16" data-reveal>
+              <span className="text-red-600 dark:text-red-400 font-semibold tracking-wider text-xs sm:text-sm uppercase">Depoimentos</span>
+              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl mt-3 mb-4 sm:mb-6 text-slate-900 dark:text-[#f5f5f5] px-2">O que as famílias estão dizendo</h2>
+              <p className="text-slate-600 dark:text-[#d4d4d4] text-base sm:text-lg max-w-2xl mx-auto px-2">
                 Mais de 2.000 famílias já transformaram seu Natal com a Ceia Inteligente. Veja o que elas estão dizendo:
               </p>
             </div>
 
-            <TestimonialsSection />
+            <div data-reveal data-reveal-delay="120">
+              <TestimonialsSection />
+            </div>
           </div>
         </section>
 
-        <section id="precos" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-red-50/50">
+        <section id="precos" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-red-50/50 dark:bg-red-900/10 transition-colors duration-300">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-10 sm:mb-12 md:mb-16">
-              <span className="text-red-600 font-semibold tracking-wider text-xs sm:text-sm uppercase">Preços</span>
-              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl mt-3 mb-4 sm:mb-6 text-slate-900 px-2">Planos mensais para cada necessidade</h2>
-              <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto px-2">
+            <div className="text-center mb-10 sm:mb-12 md:mb-16" data-reveal>
+              <span className="text-red-600 dark:text-red-400 font-semibold tracking-wider text-xs sm:text-sm uppercase">Preços</span>
+              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl mt-3 mb-4 sm:mb-6 text-slate-900 dark:text-[#f5f5f5] px-2">Planos mensais para cada necessidade</h2>
+              <p className="text-slate-600 dark:text-[#d4d4d4] text-base sm:text-lg max-w-2xl mx-auto px-2">
                 Escolha o plano ideal para você. Todos incluem acesso completo às funcionalidades com limites mensais que se renovam todo mês.
               </p>
             </div>
 
-            <PlansSection />
+            <div data-reveal data-reveal-delay="120">
+              <PlansSection />
+            </div>
 
             <div className="text-center mt-8">
               <p className="text-slate-600 text-sm">
@@ -450,168 +505,168 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/50">
+        <section className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-slate-50/50 dark:bg-[#1a1a1a]/50 transition-colors duration-300">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-10 sm:mb-12 md:mb-16">
+            <div className="text-center mb-10 sm:mb-12 md:mb-16" data-reveal>
               <div className="flex items-center justify-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-red-700 rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-red-700 dark:from-red-500 dark:to-red-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Shield className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-red-600 font-semibold tracking-wider text-sm uppercase">Garantia Total</span>
+                <span className="text-red-600 dark:text-red-400 font-semibold tracking-wider text-sm uppercase">Garantia Total</span>
               </div>
-              <h2 className="font-serif text-4xl md:text-5xl mb-6 text-slate-900">Compromisso com sua Satisfação</h2>
-              <p className="text-slate-600 text-lg max-w-3xl mx-auto">
+              <h2 className="font-serif text-4xl md:text-5xl mb-6 text-slate-900 dark:text-[#f5f5f5]">Compromisso com sua Satisfação</h2>
+              <p className="text-slate-600 dark:text-[#d4d4d4] text-lg max-w-3xl mx-auto">
                 Estamos tão confiantes na qualidade do Chefe Natalino que oferecemos garantias abrangentes para você experimentar com tranquilidade total. Sua satisfação é nossa prioridade absoluta.
               </p>
                     </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-              <div className="bg-white rounded-3xl p-8 border-2 border-red-100 hover:border-red-300 hover:shadow-xl transition-all duration-300">
-                <div className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-700 rounded-2xl flex items-center justify-center mb-6">
+              <div className="bg-white dark:bg-[#2e2e2e] rounded-3xl p-8 border-2 border-red-100 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-800 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300" data-reveal data-reveal-delay="0">
+                <div className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-700 dark:from-red-500 dark:to-red-600 rounded-2xl flex items-center justify-center mb-6">
                   <CheckCircle2 className="w-7 h-7 text-white" />
                     </div>
-                <h3 className="font-serif text-2xl mb-3 text-slate-900">Garantia de Satisfação</h3>
-                <p className="text-slate-600 mb-4">
-                  Se por qualquer motivo você não ficar satisfeito com o Chefe Natalino, oferecemos garantia total. Não importa se você já usou uma vez ou várias vezes.
+                <h3 className="font-serif text-2xl mb-3 text-slate-900 dark:text-[#f5f5f5]">Garantia de Satisfação</h3>
+                <p className="text-slate-600 dark:text-[#d4d4d4] mb-4">
+                  Caso a experiência não atenda às expectativas, temos uma política simples de avaliação de reembolso. Fale conosco e analisaremos sua solicitação de forma transparente.
                 </p>
-                <ul className="space-y-2 text-sm text-slate-600">
+                <ul className="space-y-2 text-sm text-slate-600 dark:text-[#d4d4d4]">
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-                    <span>Reembolso integral em caso de insatisfação</span>
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <span>Análise de reembolso em até 7 dias, conforme política</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-                    <span>Sem perguntas complicadas</span>
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <span>Processo documentado e transparente</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <span>Processo rápido e simples</span>
                   </li>
                 </ul>
                     </div>
 
-              <div className="bg-white rounded-3xl p-8 border-2 border-red-100 hover:border-red-300 hover:shadow-xl transition-all duration-300">
-                <div className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-700 rounded-2xl flex items-center justify-center mb-6">
+              <div className="bg-white dark:bg-[#2e2e2e] rounded-3xl p-8 border-2 border-red-100 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-800 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300" data-reveal data-reveal-delay="80">
+                <div className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-700 dark:from-red-500 dark:to-red-600 rounded-2xl flex items-center justify-center mb-6">
                   <Headphones className="w-7 h-7 text-white" />
                   </div>
-                <h3 className="font-serif text-2xl mb-3 text-slate-900">Suporte Dedicado</h3>
-                <p className="text-slate-600 mb-4">
+                <h3 className="font-serif text-2xl mb-3 text-slate-900 dark:text-[#f5f5f5]">Suporte Dedicado</h3>
+                <p className="text-slate-600 dark:text-[#d4d4d4] mb-4">
                   Nossa equipe está sempre pronta para ajudar você. Não importa o problema ou dúvida, estamos aqui para resolver.
                 </p>
-                <ul className="space-y-2 text-sm text-slate-600">
+                <ul className="space-y-2 text-sm text-slate-600 dark:text-[#d4d4d4]">
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <span>Resposta em até 24 horas</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <span>Suporte via email especializado</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <span>Atendimento personalizado e humano</span>
                   </li>
                 </ul>
                 </div>
 
-              <div className="bg-white rounded-3xl p-8 border-2 border-red-100 hover:border-red-300 hover:shadow-xl transition-all duration-300">
-                <div className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-700 rounded-2xl flex items-center justify-center mb-6">
+              <div className="bg-white dark:bg-[#2e2e2e] rounded-3xl p-8 border-2 border-red-100 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-800 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300" data-reveal data-reveal-delay="140">
+                <div className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-700 dark:from-red-500 dark:to-red-600 rounded-2xl flex items-center justify-center mb-6">
                   <RefreshCw className="w-7 h-7 text-white" />
               </div>
-                <h3 className="font-serif text-2xl mb-3 text-slate-900">Atualizações Contínuas</h3>
-                <p className="text-slate-600 mb-4">
+                <h3 className="font-serif text-2xl mb-3 text-slate-900 dark:text-[#f5f5f5]">Atualizações Contínuas</h3>
+                <p className="text-slate-600 dark:text-[#d4d4d4] mb-4">
                   O Chefe Natalino está em constante evolução. Você recebe todas as melhorias e novas funcionalidades automaticamente, sem custo adicional.
                 </p>
-                <ul className="space-y-2 text-sm text-slate-600">
+                <ul className="space-y-2 text-sm text-slate-600 dark:text-[#d4d4d4]">
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <span>Novas funcionalidades regularmente</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <span>Melhorias baseadas no seu feedback</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <span>Atualizações contínuas durante a assinatura</span>
                   </li>
                 </ul>
             </div>
 
-              <div className="bg-white rounded-3xl p-8 border-2 border-red-100 hover:border-red-300 hover:shadow-xl transition-all duration-300">
-                <div className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-700 rounded-2xl flex items-center justify-center mb-6">
+              <div className="bg-white dark:bg-[#2e2e2e] rounded-3xl p-8 border-2 border-red-100 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-800 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300" data-reveal data-reveal-delay="200">
+                <div className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-700 dark:from-red-500 dark:to-red-600 rounded-2xl flex items-center justify-center mb-6">
                   <Lock className="w-7 h-7 text-white" />
           </div>
-                <h3 className="font-serif text-2xl mb-3 text-slate-900">Segurança Total</h3>
-                <p className="text-slate-600 mb-4">
+                <h3 className="font-serif text-2xl mb-3 text-slate-900 dark:text-[#f5f5f5]">Segurança Total</h3>
+                <p className="text-slate-600 dark:text-[#d4d4d4] mb-4">
                   Seus dados estão protegidos com os mais altos padrões de segurança. Garantimos privacidade e confidencialidade total.
                 </p>
-                <ul className="space-y-2 text-sm text-slate-600">
+                <ul className="space-y-2 text-sm text-slate-600 dark:text-[#d4d4d4]">
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-                    <span>Dados criptografados e seguros</span>
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <span>Dados criptografados e gerenciados com boas práticas</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <span>Não compartilhamos suas informações</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-                    <span>Conformidade com LGPD</span>
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <span>Processos alinhados à LGPD e Política de Privacidade dedicada</span>
                   </li>
                 </ul>
               </div>
 
-              <div className="bg-white rounded-3xl p-8 border-2 border-red-100 hover:border-red-300 hover:shadow-xl transition-all duration-300">
-                <div className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-700 rounded-2xl flex items-center justify-center mb-6">
+              <div className="bg-white dark:bg-[#2e2e2e] rounded-3xl p-8 border-2 border-red-100 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-800 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300" data-reveal data-reveal-delay="260">
+                <div className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-700 dark:from-red-500 dark:to-red-600 rounded-2xl flex items-center justify-center mb-6">
                   <Award className="w-7 h-7 text-white" />
                 </div>
-                <h3 className="font-serif text-2xl mb-3 text-slate-900">Compromisso com Qualidade</h3>
-                <p className="text-slate-600 mb-4">
+                <h3 className="font-serif text-2xl mb-3 text-slate-900 dark:text-[#f5f5f5]">Compromisso com Qualidade</h3>
+                <p className="text-slate-600 dark:text-[#d4d4d4] mb-4">
                   Nossa IA é constantemente treinada e aprimorada para garantir que cada sugestão seja a melhor possível para você.
                 </p>
-                <ul className="space-y-2 text-sm text-slate-600">
+                <ul className="space-y-2 text-sm text-slate-600 dark:text-[#d4d4d4]">
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <span>IA treinada com milhares de receitas</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <span>Testes contínuos de qualidade</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <span>Resultados validados por especialistas</span>
                   </li>
                 </ul>
                 </div>
 
-              <div className="bg-white rounded-3xl p-8 border-2 border-red-100 hover:border-red-300 hover:shadow-xl transition-all duration-300">
-                <div className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-700 rounded-2xl flex items-center justify-center mb-6">
+              <div className="bg-white dark:bg-[#2e2e2e] rounded-3xl p-8 border-2 border-red-100 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-800 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300" data-reveal data-reveal-delay="320">
+                <div className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-700 dark:from-red-500 dark:to-red-600 rounded-2xl flex items-center justify-center mb-6">
                   <Mail className="w-7 h-7 text-white" />
                 </div>
-                <h3 className="font-serif text-2xl mb-3 text-slate-900">Canais de Comunicação</h3>
-                <p className="text-slate-600 mb-4">
+                <h3 className="font-serif text-2xl mb-3 text-slate-900 dark:text-[#f5f5f5]">Canais de Comunicação</h3>
+                <p className="text-slate-600 dark:text-[#d4d4d4] mb-4">
                   Fique à vontade para entrar em contato conosco a qualquer momento. Estamos aqui para ajudar e ouvir suas sugestões.
                 </p>
-                <ul className="space-y-2 text-sm text-slate-600">
+                <ul className="space-y-2 text-sm text-slate-600 dark:text-[#d4d4d4]">
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <span>Email dedicado para suporte</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <span>Feedback sempre bem-vindo</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <span>Resposta rápida garantida</span>
                   </li>
                 </ul>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-3xl p-10 md:p-12 text-white relative overflow-hidden shadow-2xl">
+            <div className="bg-gradient-to-br from-red-600 to-red-700 dark:from-red-700 dark:to-red-800 rounded-3xl p-10 md:p-12 text-white relative overflow-hidden shadow-2xl">
               <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
               <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full blur-2xl"></div>
               
@@ -620,40 +675,40 @@ export default function Home() {
                   <Shield className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="font-serif text-3xl md:text-4xl mb-4">Nossa Promessa para Você</h3>
-                <p className="text-white/90 text-lg md:text-xl mb-8 max-w-2xl mx-auto leading-relaxed">
+                <p className="text-white/90 dark:text-white/80 text-lg md:text-xl mb-8 max-w-2xl mx-auto leading-relaxed">
                   Estamos comprometidos em fazer do seu Natal o melhor possível. Se por qualquer razão você não estiver completamente satisfeito, 
                   simplesmente entre em contato conosco e resolveremos juntos. Sua felicidade é nossa prioridade número um.
                 </p>
                 
                 <div className="grid md:grid-cols-3 gap-6 mt-10">
-                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+                  <div className="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 dark:border-white/10">
                     <div className="text-3xl font-bold mb-2">100%</div>
-                    <div className="text-white/90">Reembolso Garantido</div>
+                    <div className="text-white/90 dark:text-white/80">Reembolso Garantido</div>
                   </div>
-                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+                  <div className="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 dark:border-white/10">
                     <div className="text-3xl font-bold mb-2">24h</div>
-                    <div className="text-white/90">Tempo de Resposta</div>
+                    <div className="text-white/90 dark:text-white/80">Tempo de Resposta</div>
                   </div>
-                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+                  <div className="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 dark:border-white/10">
                     <div className="text-3xl font-bold mb-2">∞</div>
-                    <div className="text-white/90">Atualizações Vitalícias</div>
+                    <div className="text-white/90 dark:text-white/80">Atualizações Vitalícias</div>
                   </div>
                 </div>
 
-                <div className="mt-10 pt-8 border-t border-white/20">
-                  <p className="text-white/80 text-sm mb-4">
+                <div className="mt-10 pt-8 border-t border-white/20 dark:border-white/10">
+                  <p className="text-white/80 dark:text-white/70 text-sm mb-4">
                     Não hesite em nos contatar. Estamos aqui para garantir que você tenha a melhor experiência possível.
                   </p>
                   <div className="flex flex-wrap justify-center gap-4 text-sm">
-                    <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full">
+                    <div className="flex items-center gap-2 bg-white/10 dark:bg-white/5 px-4 py-2 rounded-full">
                       <CheckCircle2 className="w-4 h-4" />
                       <span>Sem complicações</span>
                     </div>
-                    <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full">
+                    <div className="flex items-center gap-2 bg-white/10 dark:bg-white/5 px-4 py-2 rounded-full">
                       <CheckCircle2 className="w-4 h-4" />
                       <span>Processo rápido</span>
                     </div>
-                    <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full">
+                    <div className="flex items-center gap-2 bg-white/10 dark:bg-white/5 px-4 py-2 rounded-full">
                       <CheckCircle2 className="w-4 h-4" />
                       <span>Atendimento humano</span>
                     </div>
@@ -664,11 +719,11 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="faq" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-red-50/50">
+        <section id="faq" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-red-50/50 dark:bg-red-900/10 transition-colors duration-300">
           <div className="max-w-3xl mx-auto">
-            <div className="text-center mb-10 sm:mb-12 md:mb-16">
-              <span className="text-red-600 font-semibold tracking-wider text-xs sm:text-sm uppercase">FAQ</span>
-              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl mt-3 mb-4 sm:mb-6 text-slate-900 px-2">Perguntas Frequentes</h2>
+            <div className="text-center mb-10 sm:mb-12 md:mb-16" data-reveal>
+              <span className="text-red-600 dark:text-red-400 font-semibold tracking-wider text-xs sm:text-sm uppercase">FAQ</span>
+              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl mt-3 mb-4 sm:mb-6 text-slate-900 dark:text-[#f5f5f5] px-2">Perguntas Frequentes</h2>
             </div>
 
             <div className="space-y-4">
@@ -726,63 +781,58 @@ export default function Home() {
                   answer: 'Estamos comprometidos com sua satisfação. Você pode cancelar sua assinatura a qualquer momento sem multa ou fidelidade. Se tiver qualquer problema ou dúvida, nossa equipe de suporte está disponível para ajudar e resolver qualquer questão.',
                 },
               ].map((faq, idx) => (
-                <details 
-                  key={idx} 
-                  className="faq-item bg-white rounded-2xl border border-slate-200 hover:border-red-200 hover:shadow-lg transition-all duration-300 group overflow-hidden"
-                  style={{ animationDelay: `${idx * 0.05}s` }}
-                >
-                  <summary className="p-6 cursor-pointer font-semibold text-slate-900 flex items-center justify-between list-none hover:text-red-600 transition-colors duration-300">
-                    <span>{faq.question}</span>
-                    <span className="text-2xl font-bold text-red-600 transition-all duration-300 ease-out flex-shrink-0 ml-4 transform">
-                      <span className="inline-block transition-transform duration-300">+</span>
-                    </span>
-                  </summary>
-                  <div className="faq-content text-slate-600 border-t border-slate-100">
-                    <p className="leading-relaxed">{faq.answer}</p>
-                  </div>
-                </details>
+                <FAQItem
+                  key={idx}
+                  question={faq.question}
+                  answer={faq.answer}
+                  index={idx}
+                />
               ))}
             </div>
           </div>
         </section>
 
         {/* Seção final de chamada para ação */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-red-600 to-red-700 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff12_1px,transparent_1px),linear-gradient(to_bottom,#ffffff12_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-red-600 to-red-700 dark:from-red-800 dark:to-red-900 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff12_1px,transparent_1px),linear-gradient(to_bottom,#ffffff12_1px,transparent_1px)] bg-[size:24px_24px] dark:bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)]"></div>
 
-          <div className="max-w-4xl mx-auto text-center relative z-10">
-            <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl text-white mb-6 px-2">
+          <div className="max-w-4xl mx-auto text-center relative z-10" data-reveal>
+            <div className="inline-flex items-center gap-2 px-4 py-2 mb-4 rounded-full bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/10 text-sm text-white/90 dark:text-white/80">
+              <Snowflake className="w-4 h-4 text-white/90 dark:text-white/80" />
+              <span>Disponível para esta temporada</span>
+            </div>
+            <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl text-white mb-4 px-2 text-balance">
               Pronto para transformar seu Natal?
             </h2>
-            <p className="text-white/90 text-lg sm:text-xl mb-8 max-w-2xl mx-auto px-2">
-              Mais de 2.000 famílias já usaram o Chefe Natalino para planejar o Natal perfeito. Junte-se a elas e tenha um Natal sem estresse, com tudo organizado e planejado pela IA.
+            <p className="text-white/90 dark:text-white/80 text-lg sm:text-xl mb-8 max-w-2xl mx-auto px-2">
+              <strong className="text-white">Mais de 2.000 famílias</strong> já usaram o Chefe Natalino para planejar o Natal perfeito. Junte-se a elas e tenha um Natal <span className="font-semibold text-white">sem estresse</span>, com tudo organizado e planejado pela IA.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Link href="#precos">
-                <Button size="lg" variant="ghost" className="bg-white text-red-600 hover:bg-white/90 text-lg px-10 py-6 font-semibold rounded-xl shadow-2xl">
+                <Button size="lg" variant="ghost" className="bg-white dark:bg-white text-red-600 dark:text-red-800 hover:bg-white/90 dark:hover:bg-white/90 text-lg px-10 py-6 font-semibold rounded-xl shadow-2xl">
                   <Sparkles className="w-5 h-5 mr-2" />
                   Ver Planos e Preços
                 </Button>
               </Link>
             </div>
             
-            <div className="flex flex-wrap justify-center gap-6 text-white/90 text-sm">
+            <div className="flex flex-wrap justify-center gap-6 text-white/90 dark:text-white/80 text-sm">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5" />
-                <span>Teste grátis - Sem cartão</span>
+                <span className="font-semibold text-white">Demo gratuita</span> <span className="hidden sm:inline">- Sem cartão</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5" />
-                <span>100% de garantia</span>
+                <span className="font-semibold text-white">Garantia simples</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5" />
-                <span>Atualizações durante assinatura</span>
+                <span className="font-semibold text-white">Atualizações incluídas</span>
               </div>
             </div>
             
-            <p className="text-white/70 text-xs mt-8">
+            <p className="text-white/70 dark:text-white/60 text-xs mt-8">
               O Natal está chegando. Não deixe para a última hora! Planeje agora e aproveite com tranquilidade.
             </p>
           </div>

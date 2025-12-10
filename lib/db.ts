@@ -46,15 +46,31 @@ export async function query<T = any>(
 ): Promise<QueryResult<T>> {
   const db = getPool()
   const start = Date.now()
+  
+  // Timeout de 10 segundos para prevenir queries travadas
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Query timeout')), 10000)
+  })
+
   try {
-    const result = await db.query<T>(text, params)
+    const queryPromise = db.query<T>(text, params)
+    const result = await Promise.race([queryPromise, timeoutPromise])
+    
     const duration = Date.now() - start
     if (process.env.NODE_ENV === 'development') {
-      console.log('Query executada', { text, duration, rows: result.rowCount })
+      // Log seguro - não expõe parâmetros sensíveis
+      console.log('Query executada', { 
+        duration, 
+        rows: result.rowCount,
+        paramCount: params?.length || 0
+      })
     }
     return result
-  } catch (error) {
-    console.error('Erro na query:', { text, error })
+  } catch (error: any) {
+    // Log seguro - não expõe query completa ou parâmetros
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Erro na query:', { error: error.message })
+    }
     throw error
   }
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/Button'
 
@@ -27,13 +28,13 @@ export function DemoButton() {
   }
 
   return (
-    <a href="#demo">
+    <Link href="/#demo">
       <Button variant="primary" className="hidden sm:flex items-center gap-2 rounded-full bg-red-600 hover:bg-red-700 text-white px-4 sm:px-6 py-2 text-sm sm:text-base transition-all">
         <span className="hidden lg:inline">Ver Demo</span>
         <span className="lg:hidden">Demo</span>
         <ArrowRight className="w-4 h-4" />
       </Button>
-    </a>
+    </Link>
   )
 }
 

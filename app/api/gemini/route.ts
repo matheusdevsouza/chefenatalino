@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { apiRateLimiter, getClientIdentifier, checkRateLimit } from '@/lib/security/rateLimiter'
+import { 
+  apiRateLimiter, 
+  getClientIdentifier, 
+  checkRateLimit,
+  checkMultipleRateLimits,
+  generalRateLimiter 
+} from '@/lib/security/rateLimiter'
+import { getAuthenticatedUser } from '@/lib/security/auth'
 import { geminiPromptSchema } from '@/lib/security/validation'
 import { sanitizePrompt, validatePromptStructure } from '@/lib/security/promptSanitizer'
 import { setAPIHeaders } from '@/lib/security/headers'
@@ -22,11 +29,34 @@ const REQUEST_TIMEOUT = 30000
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
-  const clientIp = getClientIdentifier(request)
   const userAgent = request.headers.get('user-agent') || 'unknown'
   const endpoint = '/api/gemini'
 
-  const rateLimitCheck = await checkRateLimit(apiRateLimiter, clientIp)
+  // Obter IP do cliente
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+                   request.headers.get('x-real-ip') ||
+                   request.ip ||
+                   'unknown'
+
+  // Obter usuário autenticado se disponível
+  const user = await getAuthenticatedUser(request)
+  const identifier = getClientIdentifier(request, user?.userId)
+
+  // Verificar múltiplos rate limits: geral + específico da API
+  const multiLimitCheck = await checkMultipleRateLimits([
+    { limiter: generalRateLimiter, identifier },
+    { limiter: apiRateLimiter, identifier },
+  ])
+
+  const rateLimitCheck = multiLimitCheck.firstBlocked || {
+    allowed: true,
+    remaining: Math.min(
+      ...multiLimitCheck.results.map(r => r.remaining)
+    ),
+    resetTime: Math.max(
+      ...multiLimitCheck.results.map(r => r.resetTime)
+    ),
+  }
   
   if (!rateLimitCheck.allowed) {
     securityLogger.log({

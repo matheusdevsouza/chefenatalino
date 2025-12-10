@@ -7,6 +7,7 @@ import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
 import { Paywall } from '@/components/Paywall'
 import { generateWithGemini } from '@/lib/gemini'
+import { sanitizeString } from '@/lib/security/clientInputSanitizer'
 
 /**
  * Formato dos dados que a IA retorna ao gerar uma ceia.
@@ -82,11 +83,12 @@ export function CeiaInteligente() {
     setResultado(null)
 
     try {
-      const restricoesSanitizadas = restricoes
-        .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
-        .replace(/javascript:/gi, '')
-        .replace(/on\w+\s*=/gi, '')
-        .substring(0, 500)
+      /**
+       * Usar função padronizada de sanitização.
+       * 
+       * Remove caracteres perigosos e limita tamanho para prevenir XSS e DoS.
+       */
+      const restricoesSanitizadas = sanitizeString(restricoes).substring(0, 500)
 
       const prompt = `
 Crie um planejamento completo de ceia de Natal em formato JSON válido com as seguintes informações:
@@ -166,21 +168,21 @@ A lista de compras deve ter quantidades exatas baseadas no número de pessoas.
           type="number"
           value={adultos}
           onChange={setAdultos}
-          min="1"
+          min={1}
         />
         <Input
           label="Número de Crianças *"
           type="number"
           value={criancas}
           onChange={setCriancas}
-          min="0"
+          min={0}
         />
         <Input
           label="Orçamento (R$) *"
           type="number"
           value={orcamento}
           onChange={setOrcamento}
-          min="0"
+          min={0}
           placeholder="Ex: 500"
         />
         <Input
@@ -254,11 +256,11 @@ A lista de compras deve ter quantidades exatas baseadas no número de pessoas.
             <Card>
               <div className="flex items-center gap-3 mb-4">
                 <ShoppingCart className="w-6 h-6 text-vermelho-vibrante" />
-                <h2 className="text-2xl font-bold text-gray-900">Lista de Compras</h2>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-[#f5f5f5]">Lista de Compras</h2>
               </div>
               <div className="space-y-2">
                 {resultado.listaCompras.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center py-2 border-b border-vermelho-vibrante/20">
+                  <div key={idx} className="flex justify-between items-center py-2 border-b border-vermelho-vibrante/20 dark:border-red-400/20">
                     <span className="text-vermelho-hover">{item.item}</span>
                     <span className="font-semibold text-vermelho-vibrante">{item.quantidade}</span>
                   </div>
@@ -271,11 +273,11 @@ A lista de compras deve ter quantidades exatas baseadas no número de pessoas.
             <Card>
               <div className="flex items-center gap-3 mb-4">
                 <Clock className="w-6 h-6 text-vermelho-vibrante" />
-                <h2 className="text-2xl font-bold text-gray-900">Cronograma Minuto-a-Minuto</h2>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-[#f5f5f5]">Cronograma Minuto-a-Minuto</h2>
               </div>
               <div className="space-y-3">
                 {resultado.cronograma.map((item, idx) => (
-                  <div key={idx} className="flex gap-4 items-start py-2 border-b border-vermelho-vibrante/20">
+                  <div key={idx} className="flex gap-4 items-start py-2 border-b border-vermelho-vibrante/20 dark:border-red-400/20">
                     <span className="font-bold text-vermelho-vibrante min-w-[80px]">{item.horario}</span>
                     <span className="text-vermelho-hover flex-1">{item.atividade}</span>
                   </div>

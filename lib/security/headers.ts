@@ -9,10 +9,56 @@ import { NextResponse } from 'next/server'
  * sobre a infraestrutura do servidor.
  */
 
-export function setSecurityHeaders(response: NextResponse): NextResponse {
+export function setSecurityHeaders(response: NextResponse, nonce?: string): NextResponse {
+  /**
+   * Detectar ambiente de forma mais robusta.
+   * 
+   * Em produção (next start), NODE_ENV pode não estar definido, então verificamos também
+   * se estamos rodando o servidor de produção do Next.js.
+   */
+  const isDevelopment = 
+    process.env.NODE_ENV === 'development' || 
+    process.env.NEXT_PHASE === 'phase-development-server'
+  
+  const isProduction = process.env.NODE_ENV === 'production'
+  
+  /**
+   * Dev: Next.js precisa unsafe-inline/unsafe-eval (Fast Refresh, HMR).
+   * Prod: Next.js gera scripts inline dinamicamente - usa 'strict-dynamic' + 'unsafe-inline'.
+   */
+  let scriptSrc = "'self'"
+  
+  if (nonce) {
+    scriptSrc += ` 'nonce-${nonce}'`
+  }
+  
+  /**
+   * Hashes mudam a cada build - por isso usamos 'strict-dynamic' em vez de hashes fixos.
+   */
+  const nextjsInlineHashes = [
+    "'sha256-Q+8tPsjVtiDsjF/Cv8FMOpg2Yg91oKFKDAJat1PPb2g='",
+    "'sha256-CFL8btkcsXma16IS52k7qnG3+TCDJV4Pst1VCgbukuQ='",
+    "'sha256-UCJb27hkdBw4XRfwb7dMok/nhue0AQevtgo0ZfxjRc4='",
+    "'sha256-RZOWOG4wGEYzqqM00JxvyL1c21wsgpcfk9jhNb9LiIk='",
+    "'sha256-Z+htuFZo1FpBAAkKpOkv8rSc+HYB1dmpC8N+EWDqpnI='",
+  ]
+  
+  if (isDevelopment) {
+    scriptSrc += " 'unsafe-inline' 'unsafe-eval'"
+  } else {
+    /**
+     * 'strict-dynamic' permite scripts carregados por scripts confiáveis.
+     * 'unsafe-inline' necessário porque Next.js injeta scripts inline no HTML.
+     */
+    scriptSrc += ` 'strict-dynamic' 'unsafe-inline'`
+  }
+  
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    `script-src ${scriptSrc}`,
+    /**
+     * unsafe-inline necessário para Tailwind CSS (classes dinâmicas).
+     */
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
@@ -20,7 +66,7 @@ export function setSecurityHeaders(response: NextResponse): NextResponse {
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "upgrade-insecure-requests",
+    ...(isDevelopment ? [] : ["upgrade-insecure-requests"]),
   ].join('; ')
 
   response.headers.set('X-Content-Type-Options', 'nosniff')

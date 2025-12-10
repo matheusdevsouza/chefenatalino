@@ -1,4 +1,5 @@
 module.exports = {
+  darkMode: 'class',
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -13,6 +14,33 @@ module.exports = {
         'vermelho-escuro': '#991b1b',
         'vermelho-claro': '#fee2e2',
         'vermelho-clarissimo': '#fef2f2',
+        'dark-bg': {
+          primary: '#1a1a1a',
+          secondary: '#2e2e2e',
+          tertiary: '#3a3a3a',
+        },
+        'dark-text': {
+          primary: '#f5f5f5',
+          secondary: '#d4d4d4',
+          tertiary: '#a3a3a3',
+        },
+        'dark-gray': {
+          50: '#f5f5f5',
+          100: '#e5e5e5',
+          200: '#d4d4d4',
+          300: '#a3a3a3',
+          400: '#737373',
+          500: '#525252',
+          600: '#404040',
+          700: '#3a3a3a',
+          800: '#2e2e2e',
+          900: '#1a1a1a',
+        },
+        'dark-red': {
+          light: '#7f1d1d',
+          DEFAULT: '#991b1b',
+          dark: '#7f1d1d',
+        },
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'sans-serif'],

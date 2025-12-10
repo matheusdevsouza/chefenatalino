@@ -3,6 +3,8 @@ import { Outfit, Playfair_Display } from 'next/font/google'
 import React from 'react'
 import './globals.css'
 import { AppProvider } from '@/context/AppContext'
+import { ModalProvider } from '@/context/ModalContext'
+import { ThemeProvider } from '@/context/ThemeContext'
 import SmoothScrollWrapper from '@/components/SmoothScrollWrapper'
 
 const outfit = Outfit({ 
@@ -25,12 +27,8 @@ export const metadata: Metadata = {
 }
 
 /**
- * Layout raiz da aplicação.
- * 
- * Configura estrutura HTML base, carrega fontes do Google Fonts
- * (Outfit e Playfair Display) e envolve toda a aplicação com o
- * AppProvider para gerenciamento de estado global. Aplica classes
- * de tipografia e antialiasing para melhor renderização.
+ * Layout raiz. Envolve com providers (Theme, App, Modal) e SmoothScrollWrapper.
+ * suppressHydrationWarning previne warnings de hidratação relacionados ao tema.
  */
 export default function RootLayout({
   children,
@@ -38,13 +36,17 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${outfit.variable} ${playfair.variable} font-sans antialiased`}>
-        <AppProvider>
-          <SmoothScrollWrapper>
-            {children}
-          </SmoothScrollWrapper>
-        </AppProvider>
+        <ThemeProvider>
+          <AppProvider>
+            <ModalProvider>
+              <SmoothScrollWrapper>
+                {children}
+              </SmoothScrollWrapper>
+            </ModalProvider>
+          </AppProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

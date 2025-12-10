@@ -8,7 +8,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
  * Armazena informações sobre acesso premium do usuário e estado
  * de carregamento dessas informações.
  */
-
 interface AppContextType {
   isPaid: boolean
   isLoading: boolean
@@ -18,38 +17,33 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
-function getUserId(): string | null {
-  if (typeof window === 'undefined') return null
-  let userId = localStorage.getItem('user_id')
+/**
+ * Com JWT, cookies HTTP-only são gerenciados automaticamente - não precisa gerenciar userId manualmente.
+ */
+async function checkAuth(): Promise<boolean> {
+  if (typeof window === 'undefined') return false
   
-  if (!userId) {
-    userId = crypto.randomUUID()
-    localStorage.setItem('user_id', userId)
-    
-    fetch('/api/user/create', { 
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId })
-    }).catch(err => console.error('Erro ao criar usuário:', err))
+  try {
+    const response = await fetch('/api/user/subscription', {
+      credentials: 'include',
+    })
+    return response.ok
+  } catch {
+    return false
   }
-  
-  return userId
 }
 
 /**
- * Provider que mantém o estado de acesso premium em toda a aplicação.
- * 
- * Ao carregar, busca automaticamente se o usuário tem assinatura ativa.
- * Componentes filhos acessam essa info usando o hook useApp.
+ * Mantém estado de acesso premium. Componentes acessam via useApp.
  */
-
 export function AppProvider({ children }: { children: ReactNode }) {
   const [isPaid, setIsPaid] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   const refreshSubscription = async () => {
-    const userId = getUserId()
-    if (!userId) {
+    const isAuthenticated = await checkAuth()
+    
+    if (!isAuthenticated) {
       setIsPaid(false)
       setIsLoading(false)
       return
@@ -57,12 +51,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     try {
       const response = await fetch('/api/user/subscription', {
-        headers: {
-          'x-user-id': userId,
-        },
+        credentials: 'include',
       })
-      const data = await response.json()
-      setIsPaid(data.isPaid || false)
+      
+      if (response.ok) {
+        const data = await response.json()
+        setIsPaid(data.isPaid || false)
+      } else {
+        setIsPaid(false)
+      }
     } catch (error) {
       console.error('Erro ao verificar assinatura:', error)
       setIsPaid(false)
@@ -89,8 +86,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
  * premium e atualizar esse status quando necessário.
  * 
  * Só funciona dentro de componentes que estão dentro do AppProvider.
+ * 
+ * @throws {Error} Se usado fora de um AppProvider
  */
-
 export function useApp() {
   const context = useContext(AppContext)
   if (context === undefined) {

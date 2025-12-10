@@ -4,18 +4,18 @@ import React from 'react'
  * Propriedades do componente Button.
  * 
  * @interface ButtonProps
- * @property {React.ReactNode} children
- * @property {() => void} [onClick] 
- * @property {'primary' | 'secondary' | 'premium' | 'ghost'} [variant='primary'] 
- * @property {'sm' | 'md' | 'lg'} [size='md'] 
- * @property {boolean} [disabled=false] 
- * @property {string} [className] 
- * @property {'button' | 'submit' | 'reset'} [type='button'] 
+ * @property {React.ReactNode} children - Conteúdo do botão
+ * @property {() => void} [onClick] - Handler de clique
+ * @property {'primary' | 'secondary' | 'premium' | 'ghost'} [variant='primary'] - Variante visual
+ * @property {'sm' | 'md' | 'lg'} [size='md'] - Tamanho do botão
+ * @property {boolean} [disabled=false] - Estado desabilitado
+ * @property {string} [className] - Classes CSS adicionais
+ * @property {'button' | 'submit' | 'reset'} [type='button'] - Tipo do botão HTML
  */
 
 interface ButtonProps {
   children: React.ReactNode
-  onClick?: () => void
+  onClick?: (e?: React.MouseEvent<HTMLButtonElement>) => void
   variant?: 'primary' | 'secondary' | 'premium' | 'ghost'
   size?: 'sm' | 'md' | 'lg'
   disabled?: boolean
@@ -26,8 +26,12 @@ interface ButtonProps {
 /**
  * Componente de botão com design moderno e limpo.
  * 
- * Implementa um botão interativo com cores sólidas e transições suaves.
- * Inclui diferentes variantes visuais para diferentes contextos de uso.
+ * Características:
+ * - 4 variantes visuais: primary, secondary, premium, ghost
+ * - 3 tamanhos: sm, md, lg
+ * - Transições suaves e feedback visual (scale no active)
+ * - Suporte completo a dark mode
+ * - Estados de foco e desabilitado bem definidos
  * 
  * @param {ButtonProps} props 
  * @returns {JSX.Element} 
@@ -56,23 +60,31 @@ export function Button({
       hover:bg-vermelho-hover
       focus:ring-vermelho-vibrante
       shadow-sm hover:shadow-md
+      dark:bg-red-600 dark:hover:bg-red-500
+      dark:shadow-lg dark:hover:shadow-xl
     `,
     secondary: `
       bg-vermelho-clarissimo text-vermelho-escuro
       hover:bg-vermelho-claro
       focus:ring-vermelho-vibrante
+      dark:bg-[#3a3a3a] dark:text-[#f5f5f5]
+      dark:hover:bg-[#3a3a3a]
     `,
     premium: `
       bg-vermelho-vibrante text-white
       hover:bg-vermelho-hover
       focus:ring-vermelho-vibrante
       shadow-md hover:shadow-lg
+      dark:bg-red-600 dark:hover:bg-red-500
+      dark:shadow-xl dark:hover:shadow-2xl
     `,
     ghost: `
       bg-transparent text-vermelho-escuro
       hover:bg-vermelho-clarissimo
       focus:ring-vermelho-vibrante
       border border-vermelho-claro
+      dark:text-[#d4d4d4] dark:border-[#3a3a3a]
+      dark:hover:bg-[#2e2e2e]
     `,
   }
   

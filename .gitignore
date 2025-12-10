@@ -35,8 +35,12 @@ next-env.d.ts
 
 # docs
 *.md
+!LICENSE.md
 
 # db
 *.sql
 database/
 migrations/
+
+# scripts
+scripts/

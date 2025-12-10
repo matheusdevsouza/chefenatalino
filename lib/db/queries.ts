@@ -1,10 +1,12 @@
 import { query } from '../db'
 import type { Subscription, User, CeiaPlan, DrinkCalculation, MagicMessage, SubscriptionPlan, Testimonial } from '@/database/types'
+import { decrypt, createSearchableHash } from '@/lib/security/encryption'
 
 /**
  * Busca um usuário pelo ID.
  * 
  * Ignora usuários deletados (soft delete).
+ * Descriptografa dados sensíveis antes de retornar.
  */
 
 export async function getUserById(userId: string): Promise<User | null> {
@@ -12,21 +14,76 @@ export async function getUserById(userId: string): Promise<User | null> {
     'SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL',
     [userId]
   )
-  return result.rows[0] || null
+  
+  if (!result.rows[0]) {
+    return null
+  }
+  
+  const user = result.rows[0]
+  
+  // Descriptografar dados sensíveis
+  return {
+    ...user,
+    name: decrypt(user.name) || user.name,
+    phone: user.phone ? decrypt(user.phone) : null,
+    avatar_url: user.avatar_url ? decrypt(user.avatar_url) : null,
+    email: user.email ? decrypt(user.email) : user.email, // Email pode estar criptografado ou não
+  } as User
 }
 
 /**
  * Busca um usuário pelo email.
  * 
  * Usado para login e verificação de email já cadastrado.
+ * Usa email_hash para busca eficiente sem descriptografar.
  */
 
 export async function getUserByEmail(email: string): Promise<User | null> {
+  const emailHash = createSearchableHash(email.trim().toLowerCase())
+  
+  // Buscar por email_hash primeiro (mais eficiente)
   const result = await query<User>(
-    'SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL',
-    [email]
+    'SELECT * FROM users WHERE email_hash = $1 AND deleted_at IS NULL',
+    [emailHash]
   )
-  return result.rows[0] || null
+  
+  if (!result.rows[0]) {
+    // Fallback: buscar por email direto (para compatibilidade com dados antigos)
+    const fallbackResult = await query<User>(
+      'SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL',
+      [email.trim().toLowerCase()]
+    )
+    
+    if (!fallbackResult.rows[0]) {
+      return null
+    }
+    
+    const user = fallbackResult.rows[0]
+    
+    // Descriptografar dados sensíveis (mas preservar password_hash intacto)
+    return {
+      ...user,
+      name: decrypt(user.name) || user.name,
+      phone: user.phone ? decrypt(user.phone) : null,
+      avatar_url: user.avatar_url ? decrypt(user.avatar_url) : null,
+      email: decrypt(user.email) || user.email,
+      // password_hash deve permanecer intacto (não descriptografar)
+      password_hash: user.password_hash,
+    } as User
+  }
+  
+  const user = result.rows[0]
+  
+  // Descriptografar dados sensíveis (mas preservar password_hash intacto)
+  return {
+    ...user,
+    name: decrypt(user.name) || user.name,
+    phone: user.phone ? decrypt(user.phone) : null,
+    avatar_url: user.avatar_url ? decrypt(user.avatar_url) : null,
+    email: decrypt(user.email) || user.email,
+    // password_hash deve permanecer intacto (não descriptografar)
+    password_hash: user.password_hash,
+  } as User
 }
 
 /**

@@ -6,6 +6,7 @@ import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
 import { generateWithGemini } from '@/lib/gemini'
+import { sanitizeString } from '@/lib/security/clientInputSanitizer'
 
 /**
  * Módulo de geração de mensagens personalizadas de Natal com IA.
@@ -35,12 +36,12 @@ export function MensagensMagicas() {
       return
     }
 
-    const destinatarioSanitizado = destinatario
-      .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
-      .replace(/javascript:/gi, '')
-      .replace(/on\w+\s*=/gi, '')
-      .trim()
-      .substring(0, 100)
+    /**
+     * Usar função padronizada de sanitização.
+     * 
+     * Remove caracteres perigosos e limita tamanho para prevenir XSS e DoS.
+     */
+    const destinatarioSanitizado = sanitizeString(destinatario).substring(0, 100)
 
     if (destinatarioSanitizado.length < 2) {
       setError('Destinatário inválido após sanitização')
@@ -153,10 +154,10 @@ Retorne APENAS as 3 mensagens, uma por linha, sem numeração, sem markdown, sem
             onChange={(e) => setTom(e.target.value as any)}
             className="
               w-full px-4 py-3 rounded-xl
-              bg-white border border-vermelho-vibrante/20
-              text-vermelho-escuro
-              focus:outline-none focus:ring-2 focus:ring-vermelho-vibrante/20
-              focus:border-vermelho-vibrante
+              bg-white dark:bg-[#3a3a3a] border border-vermelho-vibrante/20 dark:border-red-400/20
+              text-vermelho-escuro dark:text-[#f5f5f5]
+              focus:outline-none focus:ring-2 focus:ring-vermelho-vibrante/20 dark:focus:ring-red-400/20
+              focus:border-vermelho-vibrante dark:focus:border-red-400
               transition-all duration-300
               shadow-sm
             "

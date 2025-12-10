@@ -6,6 +6,34 @@ const nextConfig = {
     domains: [],
     formats: ['image/avif', 'image/webp'],
   },
+  // Configuração para evitar problemas com Edge Runtime
+  webpack: (config, { isServer, webpack }) => {
+    // Excluir módulos incompatíveis com Edge Runtime do middleware
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      }
+    }
+    
+    // Ignorar módulos que não funcionam no Edge Runtime quando usado no middleware
+    // Isso previne que ioredis e pg-native sejam incluídos no bundle do middleware
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        checkResource(resource, context) {
+          // Ignorar ioredis e pg-native quando usado no contexto do middleware ou edge-runtime
+          if (context && (context.includes('middleware') || context.includes('edge-runtime'))) {
+            return /^(ioredis|pg-native|pg\/lib\/native)$/.test(resource)
+          }
+          return false
+        },
+      })
+    )
+    
+    return config
+  },
   async headers() {
     return [
       {
@@ -46,4 +74,3 @@ const nextConfig = {
 }
 
 module.exports = nextConfig
-
