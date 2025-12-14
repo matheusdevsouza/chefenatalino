@@ -1,244 +1,191 @@
 'use client'
 
-import React, { useState } from 'react'
-import { MessageSquare, Copy, Check } from 'lucide-react'
-import { Card } from '@/components/Card'
-import { Button } from '@/components/Button'
-import { Input } from '@/components/Input'
-import { generateWithGemini } from '@/lib/gemini'
-import { sanitizeString } from '@/lib/security/clientInputSanitizer'
-
-/**
- * Módulo de geração de mensagens personalizadas de Natal com IA.
- * 
- * Permite criar mensagens únicas e personalizadas para diferentes destinatários
- * (chefe, família, amigos) em diversos tons (formal, engraçado, emocionante).
- * Usa IA para gerar três opções de mensagens prontas para uso, que podem ser
- * copiadas diretamente para WhatsApp ou outras plataformas.
- */
+import React, { useState, useCallback } from 'react'
+import {
+  Mail,
+  Sparkles,
+  Copy,
+  Download,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react'
+import ModuleLayout from '@/components/ModuleLayout'
 
 export function MensagensMagicas() {
-  const [destinatario, setDestinatario] = useState('')
-  const [tom, setTom] = useState<'formal' | 'engracado' | 'emocionante'>('formal')
+  const [recipient, setRecipient] = useState('')
+  const [tone, setTone] = useState('Calorosa')
+  const [theme, setTheme] = useState('Natal')
   const [loading, setLoading] = useState(false)
-  const [mensagens, setMensagens] = useState<string[]>([])
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
-  const [error, setError] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
+  const [notification, setNotification] = useState('')
+  const [notificationType, setNotificationType] = useState<'error' | 'success'>('error')
 
-  const handleGenerate = async () => {
-    if (!destinatario || destinatario.trim().length < 2) {
-      setError('Informe para quem é a mensagem (mínimo 2 caracteres)')
-      return
-    }
+  const isFormValid = recipient.trim().length > 0
 
-    if (destinatario.length > 100) {
-      setError('Destinatário muito longo (máximo 100 caracteres)')
-      return
-    }
-
-    /**
-     * Usar função padronizada de sanitização.
-     * 
-     * Remove caracteres perigosos e limita tamanho para prevenir XSS e DoS.
-     */
-    const destinatarioSanitizado = sanitizeString(destinatario).substring(0, 100)
-
-    if (destinatarioSanitizado.length < 2) {
-      setError('Destinatário inválido após sanitização')
+  const handleGenerateMessage = useCallback(async () => {
+    if (!isFormValid) {
+      setNotification('Preencha todos os campos obrigatórios')
+      setNotificationType('error')
       return
     }
 
     setLoading(true)
-    setError('')
-    setMensagens([])
+    setNotification('')
+    setMessage(null)
 
     try {
-      const tomDescricao = {
-        formal: 'formal e respeitoso',
-        engracado: 'engraçado e descontraído',
-        emocionante: 'emocionante e tocante',
+      const res = await fetch('/api/messages/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          recipient: recipient.trim(),
+          tone,
+          theme,
+        }),
+      })
+      const data = await res.json()
+
+      if (data.success && data.message) {
+        setMessage(data.message)
+        setNotification('Mensagem gerada com sucesso!')
+        setNotificationType('success')
+        setTimeout(() => setNotification(''), 3000)
+      } else {
+        setNotification(data.message || 'Erro ao gerar mensagem')
+        setNotificationType('error')
       }
-
-      const prompt = `
-Crie 3 mensagens de Natal curtas e prontas para WhatsApp no tom ${tomDescricao[tom]}.
-
-Destinatário: ${destinatarioSanitizado}
-
-Cada mensagem deve:
-- Ser curta (máximo 2-3 frases)
-- Ser adequada para WhatsApp
-- Ter tema natalino
-- Estar no tom ${tomDescricao[tom]}
-- Ser única e criativa
-
-Retorne APENAS as 3 mensagens, uma por linha, sem numeração, sem markdown, sem aspas, apenas o texto puro de cada mensagem separado por uma linha em branco.
-`
-
-      const response = await generateWithGemini(prompt)
-      
-      const msgs = response
-        .split(/\n\s*\n/)
-        .map(msg => msg.trim())
-        .filter(msg => msg.length > 0)
-        .slice(0, 3)
-
-      setMensagens(msgs)
-
-      try {
-        const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
-        const saveResponse = await fetch('/api/messages/save', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(userId && { 'x-user-id': userId }),
-          },
-          body: JSON.stringify({
-            destinatario: destinatarioSanitizado,
-            tom,
-            mensagens: msgs,
-          }),
-        })
-        const saveData = await saveResponse.json()
-        if (saveData.id) {
-          localStorage.setItem(`message_${saveData.id}`, JSON.stringify(msgs))
-        }
-      } catch (saveError) {
-        console.error('Erro ao salvar mensagem no banco:', saveError)
-      }
-    } catch (err: any) {
-      setError(err.message || 'Erro ao gerar mensagens. Verifique sua API key.')
+    } catch (err) {
+      setNotification('Erro de conexão. Tente novamente.')
+      setNotificationType('error')
+      console.error('Erro:', err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [recipient, tone, theme, isFormValid])
 
-  const copyToClipboard = async (text: string, index: number) => {
+  const handleSaveMessage = useCallback(async () => {
+    if (!message) return
+
     try {
-      await navigator.clipboard.writeText(text)
-      setCopiedIndex(index)
-      setTimeout(() => setCopiedIndex(null), 2000)
-
-      const messageId = Object.keys(localStorage)
-        .find(key => key.startsWith('message_'))
-        ?.replace('message_', '')
-      
-      if (messageId) {
-        try {
-          await fetch(`/api/messages/${messageId}/copy`, {
-            method: 'POST',
-          })
-        } catch (error) {
-          console.error('Erro ao marcar mensagem como copiada:', error)
-        }
+      const res = await fetch('/api/messages/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          recipient: recipient.trim(),
+          tone,
+          theme,
+          message,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setNotification('Mensagem salva com sucesso!')
+        setNotificationType('success')
+        setTimeout(() => setNotification(''), 3000)
+      } else {
+        setNotification(data.message || 'Erro ao salvar')
+        setNotificationType('error')
       }
     } catch (err) {
-      console.error('Erro ao copiar:', err)
+      setNotification('Erro ao salvar. Tente novamente.')
+      setNotificationType('error')
     }
+  }, [recipient, tone, theme, message])
+
+  const handleDownloadMessage = () => {
+    if (!message) return
+    const element = document.createElement('a')
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(message))
+    element.setAttribute('download', `mensagem-${recipient.split(' ')[0].toLowerCase()}-${new Date().toISOString().split('T')[0]}.txt`)
+    element.style.display = 'none'
+    document.body.appendChild(element)
+    element.click()
+    document.body.removeChild(element)
   }
 
-  return (
-    <div className="max-w-4xl mx-auto px-4 py-8 animate-fade-in">
-      <div className="grid md:grid-cols-2 gap-6 mb-6">
-        <Input
-          label="Para Quem é a Mensagem"
-          value={destinatario}
-          onChange={setDestinatario}
-          placeholder="Ex: Chefe, Vó, Crush, Grupo da Família"
-        />
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-vermelho-escuro">
-            Tom da Mensagem
-          </label>
-          <select
-            value={tom}
-            onChange={(e) => setTom(e.target.value as any)}
-            className="
-              w-full px-4 py-3 rounded-xl
-              bg-white dark:bg-[#3a3a3a] border border-vermelho-vibrante/20 dark:border-red-400/20
-              text-vermelho-escuro dark:text-[#f5f5f5]
-              focus:outline-none focus:ring-2 focus:ring-vermelho-vibrante/20 dark:focus:ring-red-400/20
-              focus:border-vermelho-vibrante dark:focus:border-red-400
-              transition-all duration-300
-              shadow-sm
-            "
-          >
-            <option value="formal">Formal</option>
-            <option value="engracado">Engraçado</option>
-            <option value="emocionante">Emocionante</option>
+  const handleCopyMessage = () => {
+    if (!message) return
+    navigator.clipboard.writeText(message)
+    setNotification('Mensagem copiada para a área de transferência!')
+    setNotificationType('success')
+    setTimeout(() => setNotification(''), 2000)
+  }
+
+  const left = (
+    <>
+      <h2 className="text-lg font-sans font-bold text-slate-900 dark:text-[#f5f5f5] mb-6">Detalhes da Mensagem</h2>
+
+      <div className="space-y-5">
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-[#d4d4d4] mb-2">Para quem?</label>
+          <input type="text" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="Ex: João" className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-[#3a3a3a] bg-white dark:bg-[#1a1a1a] text-slate-900 dark:text-[#f5f5f5] placeholder-slate-400 dark:placeholder-[#888] focus:outline-none focus:ring-2 focus:ring-red-600 transition" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-[#d4d4d4] mb-2">Tom da Mensagem</label>
+          <select value={tone} onChange={(e) => setTone(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-[#3a3a3a] bg-white dark:bg-[#1a1a1a] text-slate-900 dark:text-[#f5f5f5] focus:outline-none focus:ring-2 focus:ring-red-600 transition">
+            <option>Calorosa</option>
+            <option>Humorística</option>
+            <option>Sentimental</option>
+            <option>Inspiradora</option>
+            <option>Profissional</option>
           </select>
         </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-[#d4d4d4] mb-2">Tema</label>
+          <select value={theme} onChange={(e) => setTheme(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-[#3a3a3a] bg-white dark:bg-[#1a1a1a] text-slate-900 dark:text-[#f5f5f5] focus:outline-none focus:ring-2 focus:ring-red-600 transition">
+            <option>Natal</option>
+            <option>Amizade</option>
+            <option>Família</option>
+            <option>Gratidão</option>
+            <option>Motivação</option>
+          </select>
+        </div>
+
+        {notification && (
+          <div className={`p-4 rounded-lg flex items-start gap-3 ${notificationType === 'error' ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900' : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900'}`}>
+            <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${notificationType === 'error' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`} />
+            <p className={`text-sm ${notificationType === 'error' ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'}`}>{notification}</p>
+          </div>
+        )}
+
+        <button onClick={handleGenerateMessage} disabled={loading || !isFormValid} className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 disabled:bg-slate-300 dark:disabled:bg-[#3a3a3a] text-white font-semibold rounded-lg transition flex items-center justify-center gap-2">
+          {loading ? (<><Loader2 className="w-5 h-5 animate-spin" />Gerando...</>) : (<><Sparkles className="w-5 h-5" />Gerar Mensagem</>) }
+        </button>
+      </div>
+    </>
+  )
+
+  const right = !message ? (
+    <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-12 shadow-lg h-full flex flex-col items-center justify-center text-center">
+      <Mail className="w-16 h-16 text-slate-300 dark:text-[#3a3a3a] mb-4" />
+      <h3 className="text-lg font-semibold text-slate-600 dark:text-[#a3a3a3] mb-2">Nenhuma mensagem gerada</h3>
+      <p className="text-sm text-slate-500 dark:text-[#888]">Preencha os detalhes e clique em "Gerar Mensagem" para criar uma mensagem mágica personalizada</p>
+    </div>
+  ) : (
+    <div className="space-y-4">
+      <div className="flex gap-3">
+        <button onClick={handleSaveMessage} className="flex-1 py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2">✓ Salvar</button>
+        <button onClick={handleCopyMessage} className="flex-1 py-2 px-4 bg-slate-600 hover:bg-slate-700 dark:bg-[#3a3a3a] dark:hover:bg-[#4a4a4a] text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"><Copy className="w-4 h-4" />Copiar</button>
+        <button onClick={handleDownloadMessage} className="flex-1 py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"><Download className="w-4 h-4" />Baixar</button>
       </div>
 
-      <div className="flex justify-center mb-8">
-        <Button
-          onClick={handleGenerate}
-          disabled={loading}
-          size="lg"
-          variant="primary"
-        >
-          {loading ? 'Gerando Mensagens...' : 'Gerar Mensagens Mágicas'}
-        </Button>
+      <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-8 shadow-lg">
+        <h3 className="text-lg font-sans font-bold text-slate-900 dark:text-[#f5f5f5] mb-4 pb-4 border-b-2 border-red-200 dark:border-red-900">Mensagem para {recipient}</h3>
+        <div className="text-slate-700 dark:text-[#d4d4d4] whitespace-pre-wrap font-sans text-sm leading-relaxed">
+          {message}
+        </div>
       </div>
 
-      {error && (
-        <Card className="mb-6 border-vermelho-vibrante/50 bg-vermelho-clarissimo">
-          <p className="text-vermelho-vibrante">{error}</p>
-        </Card>
-      )}
-
-      {loading && (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <div className="skeleton h-6 w-32 mb-3 rounded"></div>
-              <div className="skeleton h-4 w-full rounded mb-2"></div>
-              <div className="skeleton h-4 w-5/6 rounded"></div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {mensagens.length > 0 && (
-        <div className="space-y-4 animate-scale-in">
-          {mensagens.map((msg, idx) => (
-            <Card key={idx} className="relative overflow-hidden group">
-              <div className="relative z-10">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-3">
-                      <MessageSquare className="w-5 h-5 text-vermelho-vibrante" />
-                      <span className="text-sm font-semibold text-vermelho-hover">
-                        Mensagem {idx + 1}
-                      </span>
-                    </div>
-                    <p className="text-vermelho-escuro leading-relaxed whitespace-pre-wrap">
-                      {msg}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => copyToClipboard(msg, idx)}
-                    className="
-                      p-2 rounded-lg
-                      bg-vermelho-vibrante/10 hover:bg-vermelho-vibrante/20
-                      transition-all duration-300
-                      flex-shrink-0
-                      group-hover:scale-110
-                    "
-                    title="Copiar mensagem"
-                  >
-                    {copiedIndex === idx ? (
-                      <Check className="w-5 h-5 text-vermelho-vibrante" />
-                    ) : (
-                      <Copy className="w-5 h-5 text-vermelho-hover" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+      <div className="bg-red-50 dark:bg-red-900/20 rounded-2xl p-6 border border-red-200 dark:border-red-900">
+        <p className="text-sm text-red-800 dark:text-red-300"><span className="font-semibold">Dica:</span> Você pode editar a mensagem antes de enviar para deixá-la ainda mais pessoal!</p>
+      </div>
     </div>
   )
+
+  return <ModuleLayout Icon={Mail} title="Mensagens Mágicas" subtitle="Crie mensagens de Natal personalizadas com IA" left={left} right={right} />
 }
 

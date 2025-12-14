@@ -112,6 +112,25 @@ export async function hasActiveSubscription(userId: string): Promise<boolean> {
 }
 
 /**
+ * Busca a assinatura ativa do usuário e junta informações do plano
+ * (nome, slug, preço) para exibição no frontend.
+ */
+export async function getActiveSubscriptionWithPlanDetails(userId: string): Promise<any | null> {
+  const result = await query(
+    `SELECT s.*, sp.name as plan_name, sp.slug as plan_slug, sp.price as plan_price
+     FROM subscriptions s
+     LEFT JOIN subscription_plans sp ON s.plan_id = sp.id
+     WHERE s.user_id = $1
+       AND s.status = 'active'
+       AND (s.expires_at IS NULL OR s.expires_at > CURRENT_TIMESTAMP)
+     ORDER BY s.created_at DESC
+     LIMIT 1`,
+    [userId]
+  )
+  return result.rows[0] || null
+}
+
+/**
  * Salva um novo planejamento de ceia no banco.
  * 
  * Converte os objetos JSON (cardápio, lista de compras, cronograma)

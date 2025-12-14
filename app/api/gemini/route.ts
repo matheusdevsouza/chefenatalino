@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
 
     const geminiPromise = (async () => {
       const genAI = new GoogleGenerativeAI(apiKey)
-      const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
       const result = await model.generateContent(sanitizationResult.sanitized)
       const response = await result.response
       return response.text()

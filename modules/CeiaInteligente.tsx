@@ -1,311 +1,232 @@
 'use client'
 
-import React, { useState } from 'react'
-import { ChefHat, Clock, ShoppingCart } from 'lucide-react'
-import { Card } from '@/components/Card'
-import { Button } from '@/components/Button'
-import { Input } from '@/components/Input'
-import { Paywall } from '@/components/Paywall'
-import { generateWithGemini } from '@/lib/gemini'
-import { sanitizeString } from '@/lib/security/clientInputSanitizer'
-
-/**
- * Formato dos dados que a IA retorna ao gerar uma ceia.
- * 
- * Inclui cardápio completo, lista de compras com quantidades exatas
- * e cronograma de preparação minuto a minuto.
- */
-
-interface CeiaData {
-  cardapio: {
-    entrada: string
-    pratoPrincipal: string
-    acompanhamentos: string[]
-    sobremesa: string
-  }
-  listaCompras: Array<{ item: string; quantidade: string }>
-  cronograma: Array<{ horario: string; atividade: string }>
-}
-
-/**
- * Módulo que gera planejamento completo de ceia usando IA.
- * 
- * Usuário informa número de pessoas, orçamento, horário e restrições.
- * A IA cria cardápio personalizado, lista de compras com quantidades
- * exatas e cronograma minuto a minuto.
- * 
- * Cardápio sempre aparece de graça. Lista de compras e cronograma
- * só aparecem para quem tem plano ativo.
- */
+import React, { useState, useCallback } from 'react'
+import {
+  Wand2,
+  ChefHat,
+  Copy,
+  Download,
+  AlertCircle,
+  Loader2,
+  Save,
+} from 'lucide-react'
+import Markdown from 'react-markdown'
+import ModuleLayout from '@/components/ModuleLayout'
 
 export function CeiaInteligente() {
-  const [adultos, setAdultos] = useState('')
-  const [criancas, setCriancas] = useState('')
-  const [orcamento, setOrcamento] = useState('')
-  const [horario, setHorario] = useState('')
-  const [restricoes, setRestricoes] = useState('')
+  const [guests, setGuests] = useState(4)
+  const [budget, setBudget] = useState<number | null>(200)
+  const [preferences, setPreferences] = useState('')
+  const [dietaryRestrictions, setDietaryRestrictions] = useState('')
+  const [estimatedTotal, setEstimatedTotal] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
-  const [resultado, setResultado] = useState<CeiaData | null>(null)
-  const [error, setError] = useState('')
+  const [menu, setMenu] = useState<string | null>(null)
+  const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState<'error' | 'success'>('error')
 
-  const handleGenerate = async () => {
-    if (!adultos || !criancas || !orcamento || !horario) {
-      setError('Preencha todos os campos obrigatórios')
-      return
-    }
+  const isFormValid = guests > 0 && (budget === null || budget >= 0)
 
-    const numAdultos = parseInt(adultos)
-    const numCriancas = parseInt(criancas)
-    const numOrcamento = parseFloat(orcamento)
-
-    if (isNaN(numAdultos) || numAdultos < 1 || numAdultos > 100) {
-      setError('Número de adultos inválido (1-100)')
-      return
-    }
-
-    if (isNaN(numCriancas) || numCriancas < 0 || numCriancas > 100) {
-      setError('Número de crianças inválido (0-100)')
-      return
-    }
-
-    if (isNaN(numOrcamento) || numOrcamento < 0 || numOrcamento > 100000) {
-      setError('Orçamento inválido (R$ 0 - R$ 100.000)')
-      return
-    }
-
-    if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(horario)) {
-      setError('Horário inválido')
+  const handleGenerateMenu = useCallback(async () => {
+    if (!isFormValid) {
+      setMessage('Preencha todos os campos obrigatórios')
+      setMessageType('error')
       return
     }
 
     setLoading(true)
-    setError('')
-    setResultado(null)
+    setMessage('')
+    setMenu(null)
 
     try {
-      /**
-       * Usar função padronizada de sanitização.
-       * 
-       * Remove caracteres perigosos e limita tamanho para prevenir XSS e DoS.
-       */
-      const restricoesSanitizadas = sanitizeString(restricoes).substring(0, 500)
+      const res = await fetch('/api/ceia/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          guests,
+          budget,
+          preferences,
+          dietaryRestrictions,
+        }),
+      })
+      const data = await res.json()
 
-      const prompt = `
-Crie um planejamento completo de ceia de Natal em formato JSON válido com as seguintes informações:
-
-Número de adultos: ${numAdultos}
-Número de crianças: ${numCriancas}
-Orçamento: R$ ${numOrcamento}
-Horário da ceia: ${horario}
-Restrições alimentares: ${restricoesSanitizadas || 'Nenhuma'}
-
-Retorne APENAS um JSON válido no seguinte formato (sem markdown, sem código, apenas JSON puro):
-{
-  "cardapio": {
-    "entrada": "nome da entrada",
-    "pratoPrincipal": "nome do prato principal",
-    "acompanhamentos": ["acompanhamento 1", "acompanhamento 2", "acompanhamento 3"],
-    "sobremesa": "nome da sobremesa"
-  },
-  "listaCompras": [
-    {"item": "nome do item", "quantidade": "quantidade exata"},
-    {"item": "nome do item", "quantidade": "quantidade exata"}
-  ],
-  "cronograma": [
-    {"horario": "HH:MM", "atividade": "descrição da atividade"},
-    {"horario": "HH:MM", "atividade": "descrição da atividade"}
-  ]
-}
-
-O cronograma deve ser minuto-a-minuto começando pelo menos 4 horas antes do horário da ceia.
-A lista de compras deve ter quantidades exatas baseadas no número de pessoas.
-`
-
-      const response = await generateWithGemini(prompt)
-      
-      const jsonMatch = response.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0])
-        setResultado(parsed)
-
-        try {
-          const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
-          await fetch('/api/ceia/save', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(userId && { 'x-user-id': userId }),
-            },
-            body: JSON.stringify({
-              adultos: numAdultos,
-              criancas: numCriancas,
-              orcamento: numOrcamento,
-              horario,
-              restricoes: restricoesSanitizadas || null,
-              cardapio: parsed.cardapio,
-              listaCompras: parsed.listaCompras,
-              cronograma: parsed.cronograma,
-            }),
-          })
-        } catch (saveError) {
-          console.error('Erro ao salvar ceia no banco:', saveError)
-        }
+      if (data.success && data.menu) {
+        setMenu(data.menu)
+        setEstimatedTotal(typeof data.estimated_total === 'number' ? data.estimated_total : null)
+        setMessage('Menu gerado com sucesso!')
+        setMessageType('success')
+        setTimeout(() => setMessage(''), 3000)
       } else {
-        throw new Error('Resposta inválida da IA')
+        setMessage(data.message || 'Erro ao gerar menu')
+        setMessageType('error')
       }
-    } catch (err: any) {
-      setError(err.message || 'Erro ao gerar planejamento. Verifique sua API key.')
+    } catch (err) {
+      setMessage('Erro de conexão. Tente novamente.')
+      setMessageType('error')
+      console.error('Erro:', err)
     } finally {
       setLoading(false)
     }
+  }, [guests, preferences, dietaryRestrictions, isFormValid])
+
+  const handleSaveMenu = useCallback(async () => {
+    if (!menu) return
+
+    try {
+      const res = await fetch('/api/ceia/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          guests,
+          preferences,
+          dietaryRestrictions,
+          menu,
+          estimated_total: estimatedTotal,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setMessage('Menu salvo com sucesso!')
+        setMessageType('success')
+        setTimeout(() => setMessage(''), 3000)
+      } else {
+        setMessage(data.message || 'Erro ao salvar')
+        setMessageType('error')
+      }
+    } catch (err) {
+      setMessage('Erro ao salvar. Tente novamente.')
+      setMessageType('error')
+    }
+  }, [guests, preferences, dietaryRestrictions, menu])
+
+  const handleDownloadMenu = () => {
+    if (!menu) return
+    const combined = estimatedTotal ? `${menu}\n\nEstimativa de custo: R$${estimatedTotal.toFixed(2)}` : menu
+    const element = document.createElement('a')
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(combined))
+    element.setAttribute('download', `menu-ceia-${new Date().toISOString().split('T')[0]}.txt`)
+    element.style.display = 'none'
+    document.body.appendChild(element)
+    element.click()
+    document.body.removeChild(element)
   }
 
-  return (
-    <div className="max-w-6xl mx-auto px-4 py-8 animate-fade-in">
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
-        <Input
-          label="Número de Adultos *"
-          type="number"
-          value={adultos}
-          onChange={setAdultos}
-          min={1}
-        />
-        <Input
-          label="Número de Crianças *"
-          type="number"
-          value={criancas}
-          onChange={setCriancas}
-          min={0}
-        />
-        <Input
-          label="Orçamento (R$) *"
-          type="number"
-          value={orcamento}
-          onChange={setOrcamento}
-          min={0}
-          placeholder="Ex: 500"
-        />
-        <Input
-          label="Horário da Ceia *"
-          type="time"
-          value={horario}
-          onChange={setHorario}
-        />
-        <Input
-          label="Restrições Alimentares"
-          value={restricoes}
-          onChange={setRestricoes}
-          placeholder="Ex: Vegetariano, Sem glúten, etc."
-          className="md:col-span-2"
-        />
+  const handleCopyMenu = () => {
+    if (!menu) return
+    const combined = estimatedTotal ? `${menu}\n\nEstimativa de custo: R$${estimatedTotal.toFixed(2)}` : menu
+    navigator.clipboard.writeText(combined)
+    setMessage('Menu copiado para a área de transferência!')
+    setMessageType('success')
+    setTimeout(() => setMessage(''), 2000)
+  }
+
+  const left = (
+    <>
+      <h2 className="text-lg font-sans font-bold text-slate-900 dark:text-[#f5f5f5] mb-6">Preferências da Ceia</h2>
+
+      <div className="space-y-5">
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-[#d4d4d4] mb-2">Número de Convidados</label>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setGuests(Math.max(1, guests - 1))} className="flex-1 py-2 bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#4a4a4a] rounded text-sm font-semibold transition">−</button>
+            <input type="number" min="1" value={guests} onChange={(e) => setGuests(Math.max(1, Number(e.target.value)))} className="flex-1 px-3 py-2 rounded border border-slate-300 dark:border-[#3a3a3a] bg-white dark:bg-[#1a1a1a] text-center text-slate-900 dark:text-[#f5f5f5] focus:outline-none focus:ring-2 focus:ring-red-600" />
+            <button onClick={() => setGuests(guests + 1)} className="flex-1 py-2 bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#4a4a4a] rounded text-sm font-semibold transition">+</button>
+          </div>
+        </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-[#d4d4d4] mb-2">Orçamento (R$)</label>
+              <input type="number" min="0" value={budget ?? ''} onChange={(e) => setBudget(e.target.value === '' ? null : Number(e.target.value))} placeholder="Ex: 200" className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-[#3a3a3a] bg-white dark:bg-[#1a1a1a] text-slate-900 dark:text-[#f5f5f5] placeholder-slate-400 dark:placeholder-[#888] focus:outline-none focus:ring-2 focus:ring-red-600 transition" />
+            </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-[#d4d4d4] mb-2">Preferências Culinárias</label>
+          <textarea value={preferences} onChange={(e) => setPreferences(e.target.value)} placeholder="Ex: gosto de frutos do mar, pratos principais leves..." className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-[#3a3a3a] bg-white dark:bg-[#1a1a1a] text-slate-900 dark:text-[#f5f5f5] placeholder-slate-400 dark:placeholder-[#888] focus:outline-none focus:ring-2 focus:ring-red-600 resize-none h-32 transition" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-[#d4d4d4] mb-2">Restrições Dietéticas</label>
+          <textarea value={dietaryRestrictions} onChange={(e) => setDietaryRestrictions(e.target.value)} placeholder="Ex: sem glúten, vegetariano, alergia a amendoim..." className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-[#3a3a3a] bg-white dark:bg-[#1a1a1a] text-slate-900 dark:text-[#f5f5f5] placeholder-slate-400 dark:placeholder-[#888] focus:outline-none focus:ring-2 focus:ring-red-600 resize-none h-32 transition" />
+        </div>
+
+        {message && (
+          <div className={`p-4 rounded-lg flex items-start gap-3 ${messageType === 'error' ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900' : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900'}`}>
+            <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${messageType === 'error' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`} />
+            <p className={`text-sm ${messageType === 'error' ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'}`}>{message}</p>
+          </div>
+        )}
+
+        <button onClick={handleGenerateMenu} disabled={loading || !isFormValid} className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 disabled:bg-slate-300 dark:disabled:bg-[#3a3a3a] text-white font-semibold rounded-lg transition flex items-center justify-center gap-2">
+          {loading ? (<><Loader2 className="w-5 h-5 animate-spin" />Gerando...</>) : (<><Wand2 className="w-5 h-5" />Gerar Menu</>) }
+        </button>
+      </div>
+    </>
+  )
+
+  const right = !menu ? (
+    <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-12 shadow-lg h-full flex flex-col items-center justify-center text-center">
+      <ChefHat className="w-16 h-16 text-slate-300 dark:text-[#3a3a3a] mb-4" />
+      <h3 className="text-lg font-semibold text-slate-600 dark:text-[#a3a3a3] mb-2">Nenhum menu gerado</h3>
+      <p className="text-sm text-slate-500 dark:text-[#888]">Preencha suas preferências e clique em "Gerar Menu" para criar uma ceia perfeita com IA</p>
+    </div>
+  ) : (
+    <div className="space-y-4 h-full flex flex-col">
+      {/* Botões melhorados - mais organizados no topo */}
+      <div className="flex gap-2 flex-wrap">
+        <button onClick={handleSaveMenu} className="flex-1 min-w-[120px] py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2 text-sm">
+          <Save className="w-4 h-4" />Salvar
+        </button>
+        <button onClick={handleCopyMenu} className="flex-1 min-w-[120px] py-2.5 px-4 bg-slate-600 hover:bg-slate-700 dark:bg-[#3a3a3a] dark:hover:bg-[#4a4a4a] text-white font-semibold rounded-lg transition flex items-center justify-center gap-2 text-sm">
+          <Copy className="w-4 h-4" />Copiar
+        </button>
+        <button onClick={handleDownloadMenu} className="flex-1 min-w-[120px] py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2 text-sm">
+          <Download className="w-4 h-4" />Baixar
+        </button>
       </div>
 
-      <div className="flex justify-center mb-8">
-        <Button
-          onClick={handleGenerate}
-          disabled={loading}
-          size="lg"
-          variant="primary"
-        >
-          {loading ? 'Gerando Planejamento...' : 'Gerar Planejamento Inteligente'}
-        </Button>
+      {/* Container com scrollbar e altura limitada */}
+      <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-8 shadow-lg flex-1 overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-red-200 dark:border-red-900 flex-shrink-0">
+          <h3 className="text-lg font-sans font-bold text-slate-900 dark:text-[#f5f5f5]">Seu Menu de Ceia</h3>
+          {estimatedTotal !== null && (
+            <div className="text-sm text-slate-700 dark:text-[#d4d4d4]">Estimativa: <span className="font-semibold">R${estimatedTotal.toFixed(2)}</span></div>
+          )}
+        </div>
+        
+        {/* Scrollable menu content */}
+        <div className="overflow-y-auto flex-1 pr-4">
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <div className="text-slate-700 dark:text-[#d4d4d4] font-sans text-sm leading-relaxed">
+              <Markdown
+                components={{
+                  h1: ({node, ...props}) => <h1 className="text-2xl font-bold mt-6 mb-4 text-slate-900 dark:text-[#f5f5f5]" {...props} />,
+                  h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-5 mb-3 text-slate-900 dark:text-[#f5f5f5]" {...props} />,
+                  h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-4 mb-2 text-slate-900 dark:text-[#f5f5f5]" {...props} />,
+                  p: ({node, ...props}) => <p className="mb-3 text-slate-700 dark:text-[#d4d4d4]" {...props} />,
+                  ul: ({node, ...props}) => <ul className="list-disc list-inside mb-3 text-slate-700 dark:text-[#d4d4d4]" {...props} />,
+                  ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-3 text-slate-700 dark:text-[#d4d4d4]" {...props} />,
+                  li: ({node, ...props}) => <li className="mb-1 ml-2" {...props} />,
+                  strong: ({node, ...props}) => <strong className="font-bold text-slate-900 dark:text-[#f5f5f5]" {...props} />,
+                  em: ({node, ...props}) => <em className="italic" {...props} />,
+                  code: ({node, ...props}) => <code className="bg-slate-100 dark:bg-[#3a3a3a] px-2 py-1 rounded text-sm font-mono" {...props} />,
+                }}
+              >
+                {menu}
+              </Markdown>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {error && (
-        <Card className="mb-6 border-red-500/50 bg-red-500/10">
-          <p className="text-red-400">{error}</p>
-        </Card>
-      )}
-
-      {resultado && (
-        <div className="space-y-6 animate-scale-in">
-          <Card className="relative overflow-hidden">
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="relative">
-                  <ChefHat className="w-6 h-6 text-vermelho-vibrante" />
-                </div>
-                <h2 className="text-2xl font-bold text-vermelho-escuro">Cardápio Completo</h2>
-              </div>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold text-vermelho-escuro mb-2">Entrada</h3>
-                <p className="text-vermelho-hover">{resultado.cardapio.entrada}</p>
-              </div>
-              <div>
-                <h3 className="font-semibold text-vermelho-escuro mb-2">Prato Principal</h3>
-                <p className="text-vermelho-hover">{resultado.cardapio.pratoPrincipal}</p>
-              </div>
-              <div>
-                <h3 className="font-semibold text-vermelho-escuro mb-2">Acompanhamentos</h3>
-                  <ul className="list-disc list-inside text-vermelho-hover space-y-1">
-                  {resultado.cardapio.acompanhamentos.map((item, idx) => (
-                    <li key={idx}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h3 className="font-semibold text-vermelho-escuro mb-2">Sobremesa</h3>
-                <p className="text-vermelho-hover">{resultado.cardapio.sobremesa}</p>
-              </div>
-            </div>
-            </div>
-          </Card>
-
-          <Paywall moduleName="Lista de Compras">
-            <Card>
-              <div className="flex items-center gap-3 mb-4">
-                <ShoppingCart className="w-6 h-6 text-vermelho-vibrante" />
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-[#f5f5f5]">Lista de Compras</h2>
-              </div>
-              <div className="space-y-2">
-                {resultado.listaCompras.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center py-2 border-b border-vermelho-vibrante/20 dark:border-red-400/20">
-                    <span className="text-vermelho-hover">{item.item}</span>
-                    <span className="font-semibold text-vermelho-vibrante">{item.quantidade}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </Paywall>
-
-          <Paywall moduleName="Cronograma">
-            <Card>
-              <div className="flex items-center gap-3 mb-4">
-                <Clock className="w-6 h-6 text-vermelho-vibrante" />
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-[#f5f5f5]">Cronograma Minuto-a-Minuto</h2>
-              </div>
-              <div className="space-y-3">
-                {resultado.cronograma.map((item, idx) => (
-                  <div key={idx} className="flex gap-4 items-start py-2 border-b border-vermelho-vibrante/20 dark:border-red-400/20">
-                    <span className="font-bold text-vermelho-vibrante min-w-[80px]">{item.horario}</span>
-                    <span className="text-vermelho-hover flex-1">{item.atividade}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </Paywall>
-        </div>
-      )}
-
-      {loading && (
-        <div className="space-y-6">
-          <Card>
-            <div className="skeleton h-8 w-48 mb-4 rounded"></div>
-            <div className="skeleton h-4 w-full rounded mb-2"></div>
-            <div className="skeleton h-4 w-3/4 rounded"></div>
-          </Card>
-          <Card>
-            <div className="skeleton h-8 w-48 mb-4 rounded"></div>
-            <div className="space-y-2">
-              <div className="skeleton h-4 w-full rounded"></div>
-              <div className="skeleton h-4 w-full rounded"></div>
-              <div className="skeleton h-4 w-5/6 rounded"></div>
-            </div>
-          </Card>
-        </div>
-      )}
+      {/* Dica na base */}
+      <div className="bg-red-50 dark:bg-red-900/20 rounded-2xl p-4 border border-red-200 dark:border-red-900 flex-shrink-0">
+        <p className="text-xs text-red-800 dark:text-red-300"><span className="font-semibold">Dica:</span> Menu gerado com IA. Personalize conforme necessário!</p>
+      </div>
     </div>
   )
+
+  return <ModuleLayout Icon={ChefHat} title="Ceia Inteligente" subtitle="Crie um menu de Ceia de Natal personalizado com IA" left={left} right={right} />
 }
 

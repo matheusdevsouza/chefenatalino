@@ -62,6 +62,8 @@ export async function POST(request: NextRequest) {
         return setAPIHeaders(response)
       }
     }
+    ,
+    { requireSubscription: true }
   )
 }
 

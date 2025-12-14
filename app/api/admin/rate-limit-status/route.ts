@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { setAPIHeaders } from '@/lib/security/headers'
-import { getRedisStatus, checkRedisHealth } from '@/lib/security/redis'
 import { 
   generalRateLimiter, 
   apiRateLimiter, 
@@ -13,17 +12,15 @@ import { getClientIdentifier } from '@/lib/security/rateLimiter'
  * Endpoint administrativo para verificar status do rate limiting.
  * 
  * Retorna informações sobre:
- * - Status do Redis (disponibilidade, fallback para memória)
- * - Health check do Redis
  * - Status atual de rate limits para o IP/usuário (general, api, strict)
  * - Métricas de uso e identificador do cliente
+ * 
+ * NOTA: Rate limiting utiliza memória local. Não requer Redis.
  * 
  * Requer autenticação administrativa (implementar conforme necessário).
  */
 export async function GET(request: NextRequest) {
   try {
-    const redisStatus = getRedisStatus()
-    const redisHealth = await checkRedisHealth()
     const identifier = getClientIdentifier(request)
 
     /**
@@ -39,11 +36,7 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.json({
       success: true,
-      redis: {
-        available: redisStatus.available,
-        fallbackToMemory: redisStatus.fallbackToMemory,
-        health: redisHealth,
-      },
+      rateLimitEngine: 'memory',
       rateLimits: {
         general: generalInfo,
         api: apiInfo,

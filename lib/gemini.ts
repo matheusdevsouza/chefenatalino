@@ -8,7 +8,7 @@
 
 export async function generateWithGemini(prompt: string): Promise<string> {
   try {
-    const response = await fetch('/api/gemini', {
+    const response = await fetch('http://localhost:3000/api/gemini', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

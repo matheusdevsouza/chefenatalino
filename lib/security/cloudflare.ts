@@ -175,7 +175,7 @@ export function shouldBlockRequest(request: NextRequest): {
     }
   }
   
-  // Bloquear Tor (opcional - descomente se necessário)
+  // Bloquear Tor 
   // if (securityInfo.isTor) {
   //   return {
   //     block: true,

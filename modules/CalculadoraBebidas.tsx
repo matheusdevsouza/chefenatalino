@@ -1,222 +1,218 @@
 'use client'
 
-import React, { useState } from 'react'
-import { Wine, Beer, Coffee, Droplet } from 'lucide-react'
-import { Card } from '@/components/Card'
-import { Button } from '@/components/Button'
-import { Input } from '@/components/Input'
-
-/**
- * Resultado do cálculo de bebidas para o evento.
- */
-
-interface CalculoBebidas {
-  vinho: number
-  cerveja: number
-  refrigerante: number
-  agua: number
-  espumante: number
-}
-
-/**
- * Módulo de calculadora de bebidas para eventos de Natal.
- * 
- * Calcula a quantidade exata de bebidas necessárias baseado no número de
- * pessoas que consomem álcool, pessoas que não consomem, duração do evento
- * e nível de consumo esperado. Usa algoritmos baseados em médias de consumo
- * para fornecer estimativas precisas.
- */
+import React, { useState, useCallback } from 'react'
+import {
+  Users,
+  Clock,
+  Wine,
+  AlertCircle,
+  Loader2,
+  Copy,
+  Download,
+} from 'lucide-react'
+import ModuleLayout from '@/components/ModuleLayout'
 
 export function CalculadoraBebidas() {
-  const [bebem, setBebem] = useState('')
-  const [naoBebem, setNaoBebem] = useState('')
-  const [duracao, setDuracao] = useState('')
-  const [nivel, setNivel] = useState<'moderado' | 'alto'>('moderado')
-  const [resultado, setResultado] = useState<CalculoBebidas | null>(null)
+  const [guests, setGuests] = useState(10)
+  const [hours, setHours] = useState(4)
+  const [eventType, setEventType] = useState('Misto')
+  const [loading, setLoading] = useState(false)
+  const [results, setResults] = useState<any | null>(null)
+  const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState<'error' | 'success'>('error')
 
-  const calcular = async () => {
-    if (!bebem || !naoBebem || !duracao) {
+  const isFormValid = guests > 0 && hours > 0
+
+  const handleCalculate = useCallback(async () => {
+    if (!isFormValid) {
+      setMessage('Preencha todos os campos obrigatórios')
+      setMessageType('error')
       return
     }
 
-    const numBebem = parseInt(bebem)
-    const numNaoBebem = parseInt(naoBebem)
-    const numDuracao = parseFloat(duracao)
-
-    if (isNaN(numBebem) || numBebem < 0 || numBebem > 1000) {
-      return
-    }
-
-    if (isNaN(numNaoBebem) || numNaoBebem < 0 || numNaoBebem > 1000) {
-      return
-    }
-
-    if (isNaN(numDuracao) || numDuracao < 0.5 || numDuracao > 24) {
-      return
-    }
-
-    const totalPessoas = numBebem + numNaoBebem
-    const horas = numDuracao
-    const pessoasBebem = numBebem
-    const pessoasNaoBebem = numNaoBebem
-
-    const fatorVinho = nivel === 'alto' ? 0.5 : 0.3
-    const fatorCerveja = nivel === 'alto' ? 2.5 : 1.5
-    const fatorRefrigerante = 1.5
-    const fatorAgua = 0.5
-    const fatorEspumante = nivel === 'alto' ? 0.3 : 0.2
-
-    const calculo: CalculoBebidas = {
-      vinho: Math.ceil(pessoasBebem * horas * fatorVinho),
-      cerveja: Math.ceil(pessoasBebem * horas * fatorCerveja),
-      refrigerante: Math.ceil(totalPessoas * horas * fatorRefrigerante),
-      agua: Math.ceil(totalPessoas * horas * fatorAgua),
-      espumante: Math.ceil(totalPessoas * fatorEspumante),
-    }
-
-    setResultado(calculo)
+    setLoading(true)
+    setMessage('')
+    setResults(null)
 
     try {
-      await fetch('/api/drinks/save', {
+      const aiRes = await fetch('/api/ai/drinks', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          pessoas_bebem: numBebem,
-          pessoas_nao_bebem: numNaoBebem,
-          duracao: numDuracao,
-          nivel,
-          resultado: calculo,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ guests, hours, type: eventType }),
       })
-    } catch (saveError) {
-      console.error('Erro ao salvar cálculo no banco:', saveError)
+      const aiData = await aiRes.json()
+
+      if (aiData?.success && aiData?.result) {
+        setResults(aiData.result)
+        setMessage('Cálculo gerado com sucesso!')
+        setMessageType('success')
+        setTimeout(() => setMessage(''), 3000)
+      } else {
+        const res = await fetch('/api/drinks/calculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ guests, hours, type: eventType }),
+        })
+        const data = await res.json()
+        if (data.success) {
+          setResults(data.result)
+          setMessage('Cálculo gerado com sucesso!')
+          setMessageType('success')
+          setTimeout(() => setMessage(''), 3000)
+        } else {
+          setMessage(data.message || 'Erro ao calcular')
+          setMessageType('error')
+        }
+      }
+    } catch (err) {
+      setMessage('Erro de conexão. Tente novamente.')
+      setMessageType('error')
+      console.error('Erro:', err)
+    } finally {
+      setLoading(false)
     }
+  }, [guests, hours, eventType, isFormValid])
+
+  const handleSaveCalculation = useCallback(async () => {
+    if (!results) return
+
+    try {
+      const res = await fetch('/api/drinks/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ guests, hours, type: eventType, result: results }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setMessage('Cálculo salvo com sucesso!')
+        setMessageType('success')
+        setTimeout(() => setMessage(''), 3000)
+      } else {
+        setMessage(data.message || 'Erro ao salvar')
+        setMessageType('error')
+      }
+    } catch (err) {
+      setMessage('Erro ao salvar. Tente novamente.')
+      setMessageType('error')
+    }
+  }, [guests, hours, eventType, results])
+
+  const handleDownloadResults = () => {
+    if (!results) return
+    const content = JSON.stringify(results, null, 2)
+    const element = document.createElement('a')
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content))
+    element.setAttribute('download', `bebidas-${new Date().toISOString().split('T')[0]}.json`)
+    element.style.display = 'none'
+    document.body.appendChild(element)
+    element.click()
+    document.body.removeChild(element)
   }
 
-  const bebidas = [
-    {
-      nome: 'Garrafas de Vinho',
-      quantidade: resultado?.vinho || 0,
-      unidade: 'garrafas',
-      icon: Wine,
-      color: 'text-vermelho-vibrante',
-      bgColor: 'bg-vermelho-vibrante/10',
-    },
-    {
-      nome: 'Latas de Cerveja',
-      quantidade: resultado?.cerveja || 0,
-      unidade: 'latas',
-      icon: Beer,
-      color: 'text-vermelho-vibrante',
-      bgColor: 'bg-vermelho-vibrante/10',
-    },
-    {
-      nome: 'Latas de Refrigerante',
-      quantidade: resultado?.refrigerante || 0,
-      unidade: 'latas',
-      icon: Coffee,
-      color: 'text-vermelho-vibrante',
-      bgColor: 'bg-vermelho-vibrante/10',
-    },
-    {
-      nome: 'Água',
-      quantidade: resultado?.agua || 0,
-      unidade: 'litros',
-      icon: Droplet,
-      color: 'text-vermelho-vibrante',
-      bgColor: 'bg-vermelho-vibrante/10',
-    },
-    {
-      nome: 'Garrafas de Espumante',
-      quantidade: resultado?.espumante || 0,
-      unidade: 'garrafas',
-      icon: Droplet,
-      color: 'text-vermelho-vibrante',
-      bgColor: 'bg-vermelho-vibrante/10',
-    },
-  ]
+  const handleCopyResults = () => {
+    if (!results) return
+    const text = JSON.stringify(results, null, 2)
+    navigator.clipboard.writeText(text)
+    setMessage('Resultados copiados para a área de transferência!')
+    setMessageType('success')
+    setTimeout(() => setMessage(''), 2000)
+  }
 
-  return (
-    <div className="max-w-4xl mx-auto px-4 py-8 animate-fade-in">
-      <div className="grid md:grid-cols-2 gap-6 mb-6">
-        <Input
-          label="Pessoas que Bebem Álcool"
-          type="number"
-          value={bebem}
-          onChange={setBebem}
-          min={0}
-        />
-        <Input
-          label="Pessoas que Não Bebem"
-          type="number"
-          value={naoBebem}
-          onChange={setNaoBebem}
-          min={0}
-        />
-        <Input
-          label="Duração da Festa (horas)"
-          type="number"
-          value={duracao}
-          onChange={setDuracao}
-          min={1}
-          step={0.5}
-          placeholder="Ex: 4.5"
-        />
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-vermelho-escuro">
-            Nível de Consumo
-          </label>
-          <select
-            value={nivel}
-            onChange={(e) => setNivel(e.target.value as 'moderado' | 'alto')}
-            className="
-              w-full px-4 py-3 rounded-xl
-              bg-white dark:bg-[#3a3a3a] border border-vermelho-vibrante/20 dark:border-red-400/20
-              text-vermelho-escuro dark:text-[#f5f5f5]
-              focus:outline-none focus:ring-2 focus:ring-vermelho-vibrante/20 dark:focus:ring-red-400/20
-              focus:border-vermelho-vibrante dark:focus:border-red-400
-              transition-all duration-300
-              shadow-sm
-            "
-          >
-            <option value="moderado">Moderado</option>
-            <option value="alto">Alto</option>
+  const left = (
+    <>
+      <h2 className="text-lg font-sans font-bold text-slate-900 dark:text-[#f5f5f5] mb-6">Detalhes do Evento</h2>
+
+      <div className="space-y-5">
+        <div className="bg-slate-50 dark:bg-[#1a1a1a] rounded-lg p-4 border border-slate-200 dark:border-[#3a3a3a]">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-5 h-5 text-red-600 dark:text-red-400" />
+            <h3 className="font-semibold text-slate-900 dark:text-[#f5f5f5]">Convidados</h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setGuests(Math.max(1, guests - 1))} className="flex-1 py-2 bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#4a4a4a] rounded text-sm font-semibold transition">−</button>
+            <input type="number" min="1" value={guests} onChange={(e) => setGuests(Math.max(1, Number(e.target.value)))} className="flex-1 px-3 py-2 rounded border border-slate-300 dark:border-[#3a3a3a] bg-white dark:bg-[#1a1a1a] text-center text-slate-900 dark:text-[#f5f5f5] focus:outline-none focus:ring-2 focus:ring-red-600" />
+            <button onClick={() => setGuests(guests + 1)} className="flex-1 py-2 bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#4a4a4a] rounded text-sm font-semibold transition">+</button>
+          </div>
+        </div>
+
+        <div className="bg-slate-50 dark:bg-[#1a1a1a] rounded-lg p-4 border border-slate-200 dark:border-[#3a3a3a]">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="w-5 h-5 text-red-600 dark:text-red-400" />
+            <h3 className="font-semibold text-slate-900 dark:text-[#f5f5f5]">Duração</h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setHours(Math.max(1, hours - 1))} className="flex-1 py-2 bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#4a4a4a] rounded text-sm font-semibold transition">−</button>
+            <input type="number" min="1" value={hours} onChange={(e) => setHours(Math.max(1, Number(e.target.value)))} className="flex-1 px-3 py-2 rounded border border-slate-300 dark:border-[#3a3a3a] bg-white dark:bg-[#1a1a1a] text-center text-slate-900 dark:text-[#f5f5f5] focus:outline-none focus:ring-2 focus:ring-red-600" />
+            <button onClick={() => setHours(hours + 1)} className="flex-1 py-2 bg-slate-100 dark:bg-[#3a3a3a] hover:bg-slate-200 dark:hover:bg-[#4a4a4a] rounded text-sm font-semibold transition">+</button>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-[#a3a3a3] mt-2">horas de duração</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-[#d4d4d4] mb-2">Tipo de Evento</label>
+          <select value={eventType} onChange={(e) => setEventType(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-[#3a3a3a] bg-white dark:bg-[#1a1a1a] text-slate-900 dark:text-[#f5f5f5] focus:outline-none focus:ring-2 focus:ring-red-600 transition">
+            <option>Misto</option>
+            <option>Formal</option>
+            <option>Casual</option>
+            <option>Adulto</option>
           </select>
         </div>
+
+        {message && (
+          <div className={`p-4 rounded-lg flex items-start gap-3 ${messageType === 'error' ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900' : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900'}`}>
+            <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${messageType === 'error' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`} />
+            <p className={`text-sm ${messageType === 'error' ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'}`}>{message}</p>
+          </div>
+        )}
+
+        <button onClick={handleCalculate} disabled={loading || !isFormValid} className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 disabled:bg-slate-300 dark:disabled:bg-[#3a3a3a] text-white font-semibold rounded-lg transition flex items-center justify-center gap-2">
+          {loading ? (<><Loader2 className="w-5 h-5 animate-spin" />Calculando...</>) : ('Calcular Bebidas')}
+        </button>
+      </div>
+    </>
+  )
+
+  const right = !results ? (
+    <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-12 shadow-lg h-full flex flex-col items-center justify-center text-center">
+      <Wine className="w-16 h-16 text-slate-300 dark:text-[#3a3a3a] mb-4" />
+      <h3 className="text-lg font-semibold text-slate-600 dark:text-[#a3a3a3] mb-2">Nenhum cálculo realizado</h3>
+      <p className="text-sm text-slate-500 dark:text-[#888]">Preencha os detalhes do evento e clique em "Calcular Bebidas" para ver as recomendações</p>
+    </div>
+  ) : (
+    <div className="space-y-4">
+      <div className="flex gap-3">
+        <button onClick={handleSaveCalculation} className="flex-1 py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2">✓ Salvar Cálculo</button>
+        <button onClick={handleCopyResults} className="flex-1 py-2 px-4 bg-slate-600 hover:bg-slate-700 dark:bg-[#3a3a3a] dark:hover:bg-[#4a4a4a] text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"><Copy className="w-4 h-4" />Copiar</button>
+        <button onClick={handleDownloadResults} className="flex-1 py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"><Download className="w-4 h-4" />Baixar</button>
       </div>
 
-      <div className="flex justify-center mb-8">
-        <Button onClick={calcular} size="lg" variant="primary">
-          Calcular Bebidas
-        </Button>
-      </div>
-
-      {resultado && (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 animate-scale-in">
-          {bebidas.map((bebida, idx) => {
-            const Icon = bebida.icon
-            return (
-              <Card key={idx} className="text-center relative overflow-hidden group">
-                <div className="relative z-10">
-                  <div className={`inline-flex items-center justify-center w-16 h-16 rounded-lg ${bebida.bgColor} mb-4`}>
-                    <Icon className={`w-8 h-8 ${bebida.color}`} />
-                  </div>
-                  <h3 className="text-lg font-semibold text-vermelho-escuro mb-2">
-                    {bebida.nome}
-                  </h3>
-                  <p className="text-3xl font-bold text-vermelho-vibrante mb-1">
-                    {bebida.quantidade}
-                  </p>
-                  <p className="text-sm text-vermelho-hover">{bebida.unidade}</p>
+      <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-6 shadow-lg">
+        <h3 className="text-lg font-sans font-bold text-slate-900 dark:text-[#f5f5f5] mb-4">Recomendações de Bebidas</h3>
+        {results && typeof results === 'object' ? (
+          <div className="space-y-3">
+            {Object.entries(results).map(([key, value]) => (
+              <div key={key} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#1a1a1a] rounded-lg border border-slate-200 dark:border-[#3a3a3a] hover:border-red-300 dark:hover:border-red-600 transition">
+                <div>
+                  <p className="font-semibold text-slate-900 dark:text-[#f5f5f5] capitalize">{String(key).replace(/_/g, ' ')}</p>
                 </div>
-              </Card>
-            )
-          })}
-        </div>
-      )}
+                <p className="text-lg font-bold text-red-600 dark:text-red-400">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-slate-600 dark:text-[#a3a3a3]">{String(results)}</p>
+        )}
+      </div>
+
+      <div className="bg-red-50 dark:bg-red-900/20 rounded-2xl p-6 border border-red-200 dark:border-red-900">
+        <p className="text-sm text-red-800 dark:text-red-300"><span className="font-semibold">Dica:</span> Estas recomendações são baseadas em boas práticas do mercado. Ajuste conforme necessário para as preferências dos seus convidados.</p>
+      </div>
     </div>
   )
+
+  return <ModuleLayout Icon={Wine} title="Calculadora de Bebidas" subtitle="Calcule a quantidade perfeita de bebidas para seu evento" left={left} right={right} />
 }
 

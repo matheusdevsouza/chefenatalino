@@ -19,13 +19,12 @@ const nextConfig = {
     }
     
     // Ignorar módulos que não funcionam no Edge Runtime quando usado no middleware
-    // Isso previne que ioredis e pg-native sejam incluídos no bundle do middleware
     config.plugins.push(
       new webpack.IgnorePlugin({
         checkResource(resource, context) {
-          // Ignorar ioredis e pg-native quando usado no contexto do middleware ou edge-runtime
+          // Ignorar pg-native quando usado no contexto do middleware ou edge-runtime
           if (context && (context.includes('middleware') || context.includes('edge-runtime'))) {
-            return /^(ioredis|pg-native|pg\/lib\/native)$/.test(resource)
+            return /^(pg-native|pg\/lib\/native)$/.test(resource)
           }
           return false
         },

@@ -1,18 +1,19 @@
-import { RateLimiterRedis, RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible'
-import { createRateLimiter, getRedisStatus } from './redis'
+import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible'
+import { createRateLimiter, InMemoryRateLimiter } from './redis'
 
-// Tipo unificado para rate limiters
-export type RateLimiter = RateLimiterRedis | RateLimiterMemory
+// Tipo de rate limiter (apenas memória, Redis foi removido)
+export type RateLimiter = RateLimiterMemory | InMemoryRateLimiter
 
 /**
- * Sistema avançado de rate limiting distribuído com Redis.
+ * Sistema de rate limiting em memória.
  * 
  * Implementa múltiplos níveis de rate limiting:
  * - Por IP (proteção contra abuso)
  * - Por usuário autenticado (limites personalizados)
  * - Por endpoint (limites específicos por rota)
  * 
- * Fallback automático para memória quando Redis não está disponível.
+ * NOTA: Usa apenas memória local. Para distribuição em múltiplos servidores,
+ * considere adicionar Redis no futuro.
  */
 
 // ============================================================================
@@ -25,7 +26,7 @@ export type RateLimiter = RateLimiterRedis | RateLimiterMemory
  * 
  * Usado no middleware global para proteção básica.
  */
-export const generalRateLimiter = createRateLimiter({
+export const generalRateLimiter = new RateLimiterMemory({
   keyPrefix: 'rl:general',
   points: 100,
   duration: 60, // 1 minuto
@@ -38,7 +39,7 @@ export const generalRateLimiter = createRateLimiter({
  * 
  * Limite mais restrito devido ao custo e latência da API.
  */
-export const apiRateLimiter = createRateLimiter({
+export const apiRateLimiter = new RateLimiterMemory({
   keyPrefix: 'rl:api:gemini',
   points: 10,
   duration: 60,
@@ -53,7 +54,7 @@ export const apiRateLimiter = createRateLimiter({
  * 
  * Usado para login, registro, reset de senha, etc.
  */
-export const strictRateLimiter = createRateLimiter({
+export const strictRateLimiter = new RateLimiterMemory({
   keyPrefix: 'rl:strict',
   points: 5,
   duration: 60,
@@ -66,7 +67,7 @@ export const strictRateLimiter = createRateLimiter({
  * 
  * Previne brute force attacks.
  */
-export const authRateLimiter = createRateLimiter({
+export const authRateLimiter = new RateLimiterMemory({
   keyPrefix: 'rl:auth',
   points: 3,
   duration: 900, // 15 minutos
@@ -87,7 +88,7 @@ export function getUserRateLimiter(userId: string, isPremium: boolean = false): 
   const points = isPremium ? 500 : 100
   const keyPrefix = `rl:user:${userId}`
   
-  return createRateLimiter({
+  return new RateLimiterMemory({
     keyPrefix,
     points,
     duration: 60,
@@ -106,19 +107,19 @@ export function getContentCreationLimiter(userId: string, planLimits: {
   bebidas: number
 }) {
   return {
-    ceias: createRateLimiter({
+    ceias: new RateLimiterMemory({
       keyPrefix: `rl:user:${userId}:ceias`,
       points: planLimits.ceias,
       duration: 86400, // 24 horas
       blockDuration: 3600,
     }),
-    mensagens: createRateLimiter({
+    mensagens: new RateLimiterMemory({
       keyPrefix: `rl:user:${userId}:mensagens`,
       points: planLimits.mensagens,
       duration: 86400,
       blockDuration: 3600,
     }),
-    bebidas: createRateLimiter({
+    bebidas: new RateLimiterMemory({
       keyPrefix: `rl:user:${userId}:bebidas`,
       points: planLimits.bebidas,
       duration: 86400,
@@ -251,21 +252,35 @@ export async function getRateLimitInfo(
 ): Promise<{
   remaining: number
   resetTime: number
-  redisStatus: ReturnType<typeof getRedisStatus>
 }> {
   try {
-    const info = await limiter.get(identifier)
+    // Verifica se é InMemoryRateLimiter ou RateLimiterMemory
+    if ('get' in limiter && typeof (limiter as any).get === 'function') {
+      const info = await (limiter as any).get(identifier)
+      
+      // InMemoryRateLimiter retorna { remainingPoints, msBeforeNext }
+      if (info && 'remainingPoints' in info) {
+        return {
+          remaining: info.remainingPoints || 0,
+          resetTime: info.msBeforeNext || 0,
+        }
+      }
+      
+      // RateLimiterMemory retorna um objeto de RateLimitRecord
+      return {
+        remaining: 0,
+        resetTime: 0,
+      }
+    }
     
     return {
-      remaining: info?.remainingPoints || 0,
-      resetTime: info?.msBeforeNext || 0,
-      redisStatus: getRedisStatus(),
+      remaining: 0,
+      resetTime: 0,
     }
   } catch {
     return {
       remaining: 0,
       resetTime: 0,
-      redisStatus: getRedisStatus(),
     }
   }
 }
@@ -280,7 +295,12 @@ export async function resetRateLimit(
   identifier: string
 ): Promise<boolean> {
   try {
-    await limiter.delete(identifier)
+    // InMemoryRateLimiter usa reset(), RateLimiterMemory usa delete()
+    if ('reset' in limiter && typeof (limiter as any).reset === 'function') {
+      await (limiter as any).reset(identifier)
+    } else if ('delete' in limiter && typeof (limiter as any).delete === 'function') {
+      await (limiter as any).delete(identifier)
+    }
     return true
   } catch {
     return false

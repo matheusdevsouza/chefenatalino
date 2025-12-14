@@ -87,6 +87,12 @@ export default function LoginPage() {
         localStorage.setItem('user_id', data.user.id)
         localStorage.setItem('user_email', data.user.email)
         localStorage.setItem('user_name', data.user.name)
+        if (data.user.avatar_url) localStorage.setItem('user_avatar', data.user.avatar_url)
+        localStorage.setItem('is_authenticated', 'true')
+        
+        // IMPORTANTE: Salvar se "remember me" foi ativado
+        // Isso é usado no apiRequest para decidir se faz logout automático
+        localStorage.setItem('remember_me', remember ? 'true' : 'false')
       }
 
       router.push('/')

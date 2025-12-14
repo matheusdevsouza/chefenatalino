@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getActiveSubscription } from '@/lib/db/queries'
+import { getActiveSubscriptionWithPlanDetails } from '@/lib/db/queries'
 import { setAPIHeaders } from '@/lib/security/headers'
 import { withAuthorization } from '@/lib/security/authorization'
 
@@ -11,25 +11,28 @@ export async function GET(request: NextRequest) {
     request,
     async (user) => {
       try {
-        const subscription = await getActiveSubscription(user.id)
-        
+        const subscription = await getActiveSubscriptionWithPlanDetails(user.id)
+
         if (!subscription) {
-          return setAPIHeaders(NextResponse.json({ 
-            success: true, 
+          return setAPIHeaders(NextResponse.json({
+            success: true,
             planId: null,
-            subscription: null
+            subscription: null,
           }))
         }
 
-        const response = NextResponse.json({ 
-          success: true, 
+        const response = NextResponse.json({
+          success: true,
           planId: subscription.plan_id,
           subscription: {
             id: subscription.id,
             plan_id: subscription.plan_id,
             status: subscription.status,
-            expires_at: subscription.expires_at
-          }
+            expires_at: subscription.expires_at,
+            plan_name: subscription.plan_name || null,
+            plan_slug: subscription.plan_slug || null,
+            plan_price: subscription.plan_price || null,
+          },
         })
         return setAPIHeaders(response)
       } catch (error: any) {

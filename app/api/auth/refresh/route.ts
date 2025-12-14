@@ -31,6 +31,10 @@ export async function POST(request: NextRequest) {
       return setAPIHeaders(response)
     }
 
+    // Buscar dados atualizados do usuário para incluir na resposta
+    const { getUserById } = await import('@/lib/db/queries')
+    const updatedUser = await getUserById(payload.userId)
+
     const newAccessToken = await createAccessToken({
       userId: payload.userId,
       email: payload.email,
@@ -38,10 +42,23 @@ export async function POST(request: NextRequest) {
 
     const remember = payload.remember === true
 
-    const response = NextResponse.json({
+    const responseData: any = {
       success: true,
       message: 'Token renovado com sucesso'
-    })
+    }
+
+    // Incluir dados atualizados do usuário na resposta (name, email, etc)
+    // para o cliente poder atualizar o localStorage
+    if (updatedUser) {
+      responseData.user = {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        avatar_url: updatedUser.avatar_url,
+      }
+    }
+
+    const response = NextResponse.json(responseData)
 
     const isProduction = process.env.NODE_ENV === 'production'
     

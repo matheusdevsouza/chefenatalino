@@ -3,27 +3,33 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react'
 import { useApp } from '@/context/AppContext'
 import { useTheme } from '@/context/ThemeContext'
+import { useAuthHandler } from '@/hooks/useAuthHandler'
 import { User, LogOut, LogIn, LayoutDashboard, Settings, Moon, Sun, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/Button'
 
+
 /**
  * Componente de perfil do usuário exibido no header.
  * 
+ * IMPORTANTE: Agora com logout automático correto quando token expira.
+ * - Se "remember me" NÃO foi ativado: logout automático após expiração
+ * - Se "remember me" foi ativado: permanece logado até refresh token expirar (30 dias)
+ * 
  * Usa useLayoutEffect (não useEffect) para gerenciar cliques fora do dropdown.
  * Isso previne race conditions onde o clique de abertura fecha o menu imediatamente.
- * 
- * Proteção contra fechamento acidental: delay de 500ms após abertura antes de ativar listener.
- * Usa capture phase para interceptar eventos antes de outros handlers.
  */
 
 export function UserProfile() {
   const { isPaid, isLoading, refreshSubscription } = useApp()
   const { resolvedTheme, toggleTheme } = useTheme()
+  const { handleLogout } = useAuthHandler()
   const [userId, setUserId] = useState<string | null>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [userData, setUserData] = useState<{ name?: string; email?: string; avatar_url?: string | null } | null>(null)
+  const [isLoadingUser, setIsLoadingUser] = useState(true)
+  const [planInfo, setPlanInfo] = useState<any>(null)
   const router = useRouter()
   
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -34,18 +40,57 @@ export function UserProfile() {
   const isOpeningRef = useRef(false)
   const openTimestampRef = useRef<number>(0)
 
+  // Carregar dados do usuário ao montar componente
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return
+    
+    const loadUserData = () => {
       const storedUserId = localStorage.getItem('user_id')
       const storedUserEmail = localStorage.getItem('user_email')
       
-      if (storedUserId && storedUserEmail) {
-        setUserId(storedUserId)
+      // Se não há dados de autenticação armazenados, usuário está deslogado
+      if (!storedUserId || !storedUserEmail) {
+        setUserId(null)
+        setUserData(null)
+        setIsLoadingUser(false)
+        return
+      }
+
+      setUserId(storedUserId)
+      fetchUserData(storedUserId)
+    }
+
+    // Load data inicial
+    loadUserData()
+    setIsLoadingUser(false)
+
+    // Refetch dados quando houver refresh de token ou quando usuário se autentica
+    const handleUserDataRefresh = () => {
+      const storedUserId = localStorage.getItem('user_id')
+      if (storedUserId) {
         fetchUserData(storedUserId)
       } else {
+        // Se não há user_id armazenado, significa que foi deslogado
         setUserId(null)
         setUserData(null)
       }
+    }
+
+    // Listener para eventos de refresh de dados e logout
+    window.addEventListener('user-data-refresh', handleUserDataRefresh)
+    window.addEventListener('user-data-refreshed', handleUserDataRefresh)
+    window.addEventListener('user-logged-out', () => {
+      setUserId(null)
+      setUserData(null)
+    })
+
+    return () => {
+      window.removeEventListener('user-data-refresh', handleUserDataRefresh)
+      window.removeEventListener('user-data-refreshed', handleUserDataRefresh)
+      window.removeEventListener('user-logged-out', () => {
+        setUserId(null)
+        setUserData(null)
+      })
     }
   }, [])
 
@@ -140,7 +185,7 @@ export function UserProfile() {
     }
   }, [])
 
-  const handleLogout = useCallback(async () => {
+  const handleLogoutClick = useCallback(async () => {
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
@@ -149,19 +194,10 @@ export function UserProfile() {
     } catch (error) {
       console.error('Erro ao fazer logout:', error)
     } finally {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('user_id')
-        localStorage.removeItem('user_email')
-        localStorage.removeItem('user_name')
-        setUserId(null)
-        setUserData(null)
-        setIsDropdownOpen(false)
-        await refreshSubscription()
-        router.push('/')
-        router.refresh()
-      }
+      // Usar o handler do hook que limpa corretamente
+      handleLogout()
     }
-  }, [refreshSubscription, router])
+  }, [handleLogout])
 
   /**
    * Para propagação para evitar conflitos. Marca timestamp ao abrir para proteção de 500ms.
@@ -295,9 +331,10 @@ export function UserProfile() {
               <div className="px-4 py-3 border-b border-white/20 dark:border-white/10">
                 <p className="font-semibold text-slate-900 dark:text-[#f5f5f5] text-sm truncate">{displayName}</p>
                 <p className="text-xs text-slate-500 dark:text-[#a3a3a3] truncate">{userData?.email || ''}</p>
-                {isPaid && (
-                  <span className="inline-block mt-1 px-2 py-0.5 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50/80 dark:bg-red-900/40 backdrop-blur-sm rounded-full">
-                    Plano Ativo
+
+                {!isPaid && (
+                  <span className="inline-block mt-1 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:text-[#a3a3a3] bg-slate-50/80 dark:bg-[#3a3a3a]/40 backdrop-blur-sm rounded-full">
+                    Sem Plano
                   </span>
                 )}
               </div>
@@ -364,7 +401,7 @@ export function UserProfile() {
               
               <div className="py-1">
                 <button
-                  onClick={handleLogout}
+                  onClick={handleLogoutClick}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-white/30 dark:hover:bg-white/10 transition-colors text-left"
                   type="button"
                 >

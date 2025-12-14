@@ -12,7 +12,6 @@ export async function POST(request: NextRequest) {
         const body = await request.json()
         const userId = user.id
 
-    // Validação rigorosa de todos os campos
     const validated = mensagensInputSchema.parse({
       destinatario: body.destinatario,
       tom: body.tom,
@@ -42,6 +41,8 @@ export async function POST(request: NextRequest) {
         return setAPIHeaders(response)
       }
     }
+    ,
+    { requireSubscription: true }
   )
 }
 

@@ -37,6 +37,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <link rel="shortcut icon" href="/logo.png" type="image/x-icon" />
+      </head>
       <body className={`${outfit.variable} ${playfair.variable} font-sans antialiased`}>
         <ThemeProvider>
           <AppProvider>
