@@ -166,15 +166,15 @@ export function CeiaInteligente() {
   )
 
   const right = !menu ? (
-    <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-12 shadow-lg h-full flex flex-col items-center justify-center text-center">
+    <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-12 shadow-lg flex flex-col items-center justify-center text-center" style={{ minHeight: '400px' }}>
       <ChefHat className="w-16 h-16 text-slate-300 dark:text-[#3a3a3a] mb-4" />
       <h3 className="text-lg font-semibold text-slate-600 dark:text-[#a3a3a3] mb-2">Nenhum menu gerado</h3>
       <p className="text-sm text-slate-500 dark:text-[#888]">Preencha suas preferências e clique em "Gerar Menu" para criar uma ceia perfeita com IA</p>
     </div>
   ) : (
-    <div className="space-y-4 h-full flex flex-col">
+    <div className="space-y-4 flex flex-col h-full" style={{ maxHeight: 'calc(100vh - 8rem)' }}>
       {/* Botões melhorados - mais organizados no topo */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap flex-shrink-0">
         <button onClick={handleSaveMenu} className="flex-1 min-w-[120px] py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition flex items-center justify-center gap-2 text-sm">
           <Save className="w-4 h-4" />Salvar
         </button>
@@ -187,7 +187,7 @@ export function CeiaInteligente() {
       </div>
 
       {/* Container com scrollbar e altura limitada */}
-      <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-8 shadow-lg flex-1 overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-8 shadow-lg flex flex-col flex-1 min-h-0 overflow-hidden">
         <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-red-200 dark:border-red-900 flex-shrink-0">
           <h3 className="text-lg font-sans font-bold text-slate-900 dark:text-[#f5f5f5]">Seu Menu de Ceia</h3>
           {estimatedTotal !== null && (
@@ -196,7 +196,7 @@ export function CeiaInteligente() {
         </div>
         
         {/* Scrollable menu content */}
-        <div className="overflow-y-auto flex-1 pr-4">
+        <div className="overflow-y-auto flex-1 pr-4 min-h-0">
           <div className="prose prose-sm dark:prose-invert max-w-none">
             <div className="text-slate-700 dark:text-[#d4d4d4] font-sans text-sm leading-relaxed">
               <Markdown

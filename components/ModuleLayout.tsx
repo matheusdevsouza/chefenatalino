@@ -25,18 +25,16 @@ export default function ModuleLayout({ title, subtitle, Icon, left, right }: Pro
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-6 shadow-lg sticky top-6 h-full">
+            <div className="bg-white dark:bg-[#2e2e2e] rounded-2xl p-6 shadow-lg sticky top-6" style={{ maxHeight: 'calc(100vh - 8rem)', overflowY: 'auto' }}>
               {left}
             </div>
           </div>
 
-          <div className="lg:col-span-2 flex flex-col">
-            <div className="flex-1">
-              <div className="h-full">
-                {right}
-              </div>
+          <div className="lg:col-span-2">
+            <div style={{ maxHeight: 'calc(100vh - 8rem)' }}>
+              {right}
             </div>
           </div>
         </div>

@@ -11,26 +11,53 @@ export async function POST(req: NextRequest) {
         const body = await req.json()
         const { guests = 6, preferences = '', dietaryRestrictions = '', budget = null } = body
 
-        // Create optimized prompt for AI to generate menu (simpler to reduce token usage)
-        // Include budget if provided and ask the model to provide a brief estimated total
-        const prompt = `Crie um menu conciso de Ceia de Natal para ${guests} convidados.
-      ${preferences ? `Preferências: ${preferences}` : 'Preferências: padrão'}
-      ${dietaryRestrictions ? `Restrições: ${dietaryRestrictions}` : 'Sem restrições específicas'}
-      ${budget ? `Orçamento aproximado por pessoa/total: R$${budget}` : ''}
+        // Create optimized prompt for AI to generate menu with real price research
+        const budgetText = budget 
+          ? `ORÇAMENTO MÁXIMO TOTAL: R$ ${budget.toFixed(2)}. 
+IMPORTANTE: Você DEVE pesquisar mentalmente os preços reais de cada ingrediente necessário no mercado brasileiro atual e montar receitas cujo custo total de TODOS os ingredientes somados seja EXATAMENTE ATÉ R$ ${budget.toFixed(2)}. 
+Se o orçamento for muito baixo para ${guests} pessoas, sugira receitas simples e econômicas que caibam no valor. 
+Se o orçamento for alto, você pode usar ingredientes mais sofisticados, mas SEMPRE respeitando o limite de R$ ${budget.toFixed(2)}.`
+          : 'Sem limite de orçamento específico.'
 
-      Retorne APENAS estes itens (uma opção de cada):
-      1. Aperitivo
-      2. Entrada
-      3. Prato Principal
-      4. Acompanhamento
-      5. Sobremesa
-      6. Bebida Recomendada
+        const prompt = `Você é um chef especialista em planejamento de ceias de Natal no Brasil. Sua tarefa é criar um menu completo e realista.
 
-      Para cada item, inclua: nome, ingredientes principais (1 linha) e modo de preparo breve (2-3 linhas).
+CONTEXTO:
+- Número de convidados: ${guests} pessoas
+${preferences ? `- Preferências culinárias: ${preferences}` : '- Preferências: padrão'}
+${dietaryRestrictions ? `- Restrições dietéticas: ${dietaryRestrictions}` : '- Restrições: nenhuma'}
+${budgetText}
 
-      No final da resposta, inclua UMA LINHA com o formato exato:
-      ESTIMATED_TOTAL: R$<valor aproximado>
-      Isso nos permite extrair uma estimativa de custo.`
+INSTRUÇÕES CRÍTICAS:
+1. Para CADA receita, você DEVE pesquisar mentalmente os preços reais dos ingredientes no mercado brasileiro (supermercados, açougues, etc.)
+2. Some o custo de TODOS os ingredientes necessários para todas as receitas
+3. O valor total DEVE ser EXATAMENTE ATÉ R$ ${budget ? budget.toFixed(2) : 'ilimitado'} (não pode ultrapassar!)
+4. Se o orçamento for muito apertado (ex: R$ 50 para 10 pessoas), sugira receitas simples e econômicas que realmente caibam no valor
+5. Considere quantidades necessárias para ${guests} pessoas em cada receita
+
+ESTRUTURA DO MENU (uma opção de cada):
+1. Aperitivo
+2. Entrada
+3. Prato Principal
+4. Acompanhamento
+5. Sobremesa
+6. Bebida Recomendada
+
+Para cada item, forneça:
+- Nome do prato
+- Lista completa de ingredientes com quantidades para ${guests} pessoas
+- Preço estimado de cada ingrediente (pesquise preços reais)
+- Custo total do item
+- Modo de preparo breve (2-3 linhas)
+
+No final, inclua uma seção "RESUMO FINANCEIRO" com:
+- Custo total de cada item
+- Custo total geral
+- Confirmação de que está dentro do orçamento
+
+IMPORTANTE: O custo total DEVE ser exatamente até R$ ${budget ? budget.toFixed(2) : 'ilimitado'}. Se necessário, ajuste as receitas para respeitar este limite.
+
+No final da resposta, inclua UMA LINHA com o formato exato:
+ESTIMATED_TOTAL: R$<valor total calculado>`
 
         const menuText = await generateWithGemini(prompt)
 

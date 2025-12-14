@@ -358,7 +358,7 @@ export default function Dashboard() {
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
           {currentTab === 'home' && <HomeTab stats={stats} recentActivity={recentActivity} />}
           {currentTab === 'ceia' && <CeiaInteligente />}
           {currentTab === 'bebidas' && <CalculadoraBebidas />}
